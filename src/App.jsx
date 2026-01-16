@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Plane, Users, Plus, X, Search, DollarSign, Scale, Calendar, Briefcase, Palmtree, Mountain, Gem, Coffee, Share2, Copy, Check, Info, ArrowRight, ArrowLeft, Globe, ArrowUpDown, ExternalLink, TrendingDown, Clock, MapPin } from 'lucide-react';
+import './App.css';
 
 // AMADEUS API SERVICE
 const AmadeusAPI = {

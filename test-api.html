@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Amadeus API Test</title>
+</head>
+<body>
+    <h1>Amadeus API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing API...\n';
+
+            try {
+                // Step 1: Get access token
+                output.textContent += 'Step 1: Getting access token...\n';
+                const tokenResponse = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'client_credentials',
+                        client_id: '80NeINx2x5zyvubVaiDYugb6yoxP7voO',
+                        client_secret: '3A67wkMloGO32IiR'
+                    })
+                });
+
+                const tokenData = await tokenResponse.json();
+                output.textContent += `Token Response: ${JSON.stringify(tokenData, null, 2)}\n\n`;
+
+                if (tokenData.error) {
+                    output.textContent += `❌ Authentication failed: ${tokenData.error_description}\n`;
+                    return;
+                }
+
+                const accessToken = tokenData.access_token;
+                output.textContent += '✅ Access token obtained!\n\n';
+
+                // Step 2: Search flights (try a few different routes)
+                const testRoutes = [
+                    { from: 'LHR', to: 'BCN', date: '2026-06-15', label: 'London to Barcelona (June 15)' },
+                    { from: 'MAN', to: 'AMS', date: '2026-07-01', label: 'Manchester to Amsterdam (July 1)' },
+                    { from: 'EMA', to: 'PRG', date: '2026-05-20', label: 'East Midlands to Prague (May 20)' }
+                ];
+
+                for (const route of testRoutes) {
+                    output.textContent += `\nStep 2: Testing ${route.label}...\n`;
+                    const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${route.from}&destinationLocationCode=${route.to}&departureDate=${route.date}&adults=1&max=5`;
+                    output.textContent += `URL: ${url}\n`;
+
+                    const flightResponse = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    const flightData = await flightResponse.json();
+
+                    if (flightData.errors) {
+                        output.textContent += `❌ API Error: ${JSON.stringify(flightData.errors, null, 2)}\n`;
+                    } else if (flightData.data && flightData.data.length > 0) {
+                        output.textContent += `✅ Found ${flightData.data.length} flights!\n`;
+                        output.textContent += `First flight: ${flightData.data[0].price.total} ${flightData.data[0].price.currency}\n`;
+                    } else {
+                        output.textContent += `⚠️ No flights found for this route/date\n`;
+                    }
+                }
+
+                output.textContent += '\n\n=== TEST COMPLETE ===\n';
+                output.textContent += 'If you see "No flights found" for all routes, the Amadeus test API has very limited data.\n';
+                output.textContent += 'Try dates 2-6 months in the future on weekdays for better results.\n';
+
+            } catch (error) {
+                output.textContent += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
