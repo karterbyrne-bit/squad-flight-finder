@@ -449,25 +449,15 @@ export default function HolidayPlanner() {
       let destinationCode = destinationAirportMap[destinationCity];
 
       if (!destinationCode) {
-        const destLocations = await AmadeusAPI.searchAirports(destinationCity);
-
-        // Prefer CITY code over individual airports (PAR vs CDG) for broader results
-        const cityCode = destLocations.find(a => a.subType === 'CITY');
-        if (cityCode) {
-          destinationCode = cityCode.iataCode;
-          console.log('🏙️ Using city code for destination:', destinationCode);
-        } else {
-          // Fallback to first airport if no city code available
-          const airportOnly = destLocations.filter(a => a.subType === 'AIRPORT');
-          if (airportOnly.length === 0) {
-            throw new Error(`No airports found for ${destinationCity}`);
-          }
-          destinationCode = airportOnly[0].iataCode;
-          console.log('✈️ Using airport code for destination:', destinationCode);
+        const destAirports = await AmadeusAPI.searchAirports(destinationCity);
+        const airportOnly = destAirports.filter(a => a.subType === 'AIRPORT');
+        if (airportOnly.length === 0) {
+          throw new Error(`No airports found for ${destinationCity}`);
         }
+        destinationCode = airportOnly[0].iataCode;
       }
 
-      console.log('🎯 Destination code:', destinationCode);
+      console.log('🎯 Destination airport code:', destinationCode);
 
       // Search flights for each traveler from ALL their nearby airports
       const flightPromises = travelers.map(async (traveler) => {
@@ -919,70 +909,130 @@ export default function HolidayPlanner() {
 
         {step === 2 && (
           <>
-            <button 
-              onClick={() => { setStep(1); setShowResults(false); setFlightData({}); }} 
-              className="mb-4 px-3 py-2 text-white bg-white/20 rounded-lg text-sm hover:bg-white/30"
+            <button
+              onClick={() => {
+                setStep(1);
+                setShowResults(false);
+                setFlightData({});
+              }}
+              className="mb-6 px-5 py-3 text-white bg-white/20 backdrop-blur-sm rounded-xl text-sm font-semibold hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg"
             >
-              <ArrowLeft className="w-4 inline" /> Back
+              <ArrowLeft className="w-4 h-4" />
+              Back to Setup
             </button>
-            
+
             {!showResults && (
-              <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold">Where do you want to go?</h2>
-                  {availableDestinations.length > 0 && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">
-                      ✓ Live Results
-                    </span>
+              <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+                      Choose Your Destination
+                    </h2>
+                    {availableDestinations.length > 0 && (
+                      <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Live Results
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-600">Select a city or enter a custom destination</p>
+                  {loadingDestinations && (
+                    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-purple-600">
+                      <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                      Finding available destinations...
+                    </div>
                   )}
                 </div>
 
-                {loadingDestinations && (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-                    Finding available destinations...
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                  {filtered.map(d => (
+                {/* Destination Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                  {filtered.map((d) => (
                     <button
                       key={d.city}
                       onClick={() => setSelectedDestination(d.city)}
-                      className={`p-3 rounded-xl border-2 text-left transition-all transform hover:scale-105 ${
+                      className={`group relative p-5 rounded-2xl border-3 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
                         selectedDestination === d.city
-                          ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-lg'
-                          : 'border-gray-200 hover:border-purple-300 hover:shadow-md'
+                          ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
+                          : 'border-gray-200 bg-white hover:border-pink-300'
                       }`}
                     >
-                      <p className="font-bold text-sm">{d.city}</p>
-                      <p className="text-xs text-gray-500">{d.region}</p>
+                      {/* City Icon */}
+                      <div
+                        className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center transition-all ${
+                          selectedDestination === d.city
+                            ? 'bg-gradient-to-r from-pink-500 to-purple-500'
+                            : 'bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-pink-400 group-hover:to-purple-400'
+                        }`}
+                      >
+                        {d.types.includes('beach') && <Palmtree className="w-6 h-6 text-white" />}
+                        {d.types.includes('city') && !d.types.includes('beach') && <Briefcase className="w-6 h-6 text-white" />}
+                        {d.types.includes('luxury') && <Gem className="w-6 h-6 text-white" />}
+                        {d.types.includes('cheap') && !d.types.includes('luxury') && <Coffee className="w-6 h-6 text-white" />}
+                      </div>
+
+                      {/* City Name */}
+                      <p className="font-bold text-base mb-1 text-gray-800">{d.city}</p>
+                      <p className="text-xs text-gray-500 mb-2">{d.region}</p>
+
+                      {/* Type Badges */}
+                      <div className="flex flex-wrap gap-1">
+                        {d.types.map((type) => (
+                          <span
+                            key={type}
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                              selectedDestination === d.city
+                                ? 'bg-pink-500 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {type}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Selected Checkmark */}
                       {selectedDestination === d.city && (
-                        <div className="mt-1">
-                          <Check className="w-4 h-4 text-pink-600" />
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
                     </button>
                   ))}
                 </div>
-                
-                <input 
-                  type="text" 
-                  placeholder="Or enter custom destination" 
-                  value={customDestination} 
-                  onChange={(e) => { setCustomDestination(e.target.value); setSelectedDestination(''); }} 
-                  className="w-full px-3 py-2 border-2 rounded-lg text-sm mb-3" 
-                />
 
-                <button 
-                  onClick={searchTrips} 
-                  disabled={!destination || loading} 
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                {/* Custom Destination Input */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Or enter a custom destination:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Reykjavik, Athens, Venice..."
+                    value={customDestination}
+                    onChange={(e) => {
+                      setCustomDestination(e.target.value);
+                      setSelectedDestination('');
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
+                  />
+                </div>
+
+                {/* Search Button */}
+                <button
+                  onClick={searchTrips}
+                  disabled={!destination || loading}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-2xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <>🔍 Checking all airports for best prices...</>
+                    <>
+                      <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                      Searching all airports for best prices...
+                    </>
                   ) : (
-                    <><Search className="w-4 inline" /> Search Flights</>
+                    <>
+                      <Search className="w-5 h-5" />
+                      Search Flights to {destination}
+                    </>
                   )}
                 </button>
               </div>
@@ -992,105 +1042,167 @@ export default function HolidayPlanner() {
               <>
                 {fairness ? (
                   <>
+                    {/* Share Button */}
                     <button
                       onClick={() => setShowShareModal(true)}
-                      className="mb-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold hover:opacity-90"
+                      className="mb-6 w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
                     >
-                      <Share2 className="w-4 inline" /> Share Booking Links
+                      <Share2 className="w-5 h-5" />
+                      Share Booking Links
                     </button>
 
-                    <div className="bg-white rounded-2xl p-4 sm:p-5 mb-4 shadow-xl border-2 border-purple-100">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Scale className="w-5 text-purple-600" />
+                    {/* Fairness Score Card */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 mb-6 shadow-2xl">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                            <Scale className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-2xl font-bold text-gray-800">Fairness Score</h2>
+                            <p className="text-sm text-gray-600">How balanced are the costs?</p>
+                          </div>
                         </div>
-                        <h2 className="text-xl font-bold">Fairness Score</h2>
-                        <div className={`ml-auto px-4 py-1.5 rounded-full font-bold text-lg ${fairness.score >= 80 ? 'bg-green-100 text-green-700' : fairness.score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                        <div
+                          className={`px-6 py-3 rounded-2xl font-bold text-3xl shadow-lg ${
+                            fairness.score >= 80
+                              ? 'bg-gradient-to-r from-green-400 to-green-600 text-white'
+                              : fairness.score >= 60
+                              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
+                              : 'bg-gradient-to-r from-red-400 to-red-600 text-white'
+                          }`}
+                        >
                           {fairness.score}%
                         </div>
                       </div>
 
-                      {/* Progress Bar */}
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                        <div
-                          className={`h-2 rounded-full ${fairness.score >= 80 ? 'bg-green-600' : fairness.score >= 60 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                          style={{ width: `${fairness.score}%` }}
-                        ></div>
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-2xl mb-4">
+                        <p className="text-sm text-gray-700 flex items-center gap-2">
+                          <Info className="w-4 h-4 text-purple-600" />
+                          Balanced by distance - closer airports save you travel time!
+                        </p>
                       </div>
 
-                      <p className="text-xs text-gray-600 mb-3 bg-blue-50 p-2 rounded">✨ Balanced by distance - closer airports save you travel time!</p>
-                      {fairness.travelers.map((t, i) => (
-                        <div key={i} className="flex justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl mb-2 border-2 border-purple-200 hover:shadow-md transition-shadow">
-                          <div>
-                            <p className="font-bold text-sm flex items-center gap-2">
-                              <span className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">{i + 1}</span>
-                              {t.name}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {t.airport}
-                            </p>
-                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                              <Clock className="w-3 h-3" />
-                              {t.distance} miles away
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-purple-600 text-xl">£{Math.round(t.cost)}</p>
-                            {t.diffFromAvg !== 0 && (
-                              <p className={`text-xs font-semibold ${t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)} {t.diffFromAvg > 0 ? 'above' : 'below'} avg
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xl border-2 border-green-100">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <Plane className="w-5 text-green-600" />
-                        </div>
-                        <h2 className="text-xl font-bold">Best Flights to {destination}</h2>
-                      </div>
-                      {travelers.filter(t => t.selectedAirport).map(t => {
-                        const data = flightData[t.id];
-                        if (!data || !data.cheapest) return null;
-
-                        const flight = data.cheapest;
-                        const price = parseFloat(flight.price.total);
-                        const segment = flight.itineraries[0].segments[0];
-                        const airport = flight.departureAirport;
-
-                        return (
-                          <div key={t.id} className="mb-4 last:mb-0">
-                            <p className="font-bold mb-2 text-gray-700">{t.name || `From ${t.origin}`}</p>
-                            <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-300 hover:shadow-lg transition-shadow">
-                              <div className="flex justify-between items-start">
+                      {/* Traveler Cost Breakdown */}
+                      <div className="space-y-3">
+                        {fairness.travelers.map((t, i) => {
+                          const colors = getTravelerColor(i);
+                          return (
+                            <div
+                              key={i}
+                              className={`p-4 rounded-2xl border-2 ${colors.border} ${colors.bg} transition-all hover:shadow-lg`}
+                            >
+                              <div className="flex justify-between items-center">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Plane className="w-4 h-4 text-green-600" />
-                                    <p className="text-sm font-bold text-gray-800">{airport.name} ({airport.code}) → {segment.arrival.iataCode}</p>
-                                  </div>
-                                  <p className="text-xs text-gray-600 mb-1">✈️ {segment.carrierCode} {segment.number}</p>
-                                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {segment.duration.replace('PT', '').toLowerCase()}
+                                  <p className="font-bold text-base text-gray-800">{t.name}</p>
+                                  <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {t.airport}
                                   </p>
-                                  <div className="mt-2 bg-white/60 backdrop-blur rounded-lg px-2 py-1 inline-block">
-                                    <p className="text-xs text-green-700 font-semibold">✓ Best option from {data.allAirportOptions} nearby airport{data.allAirportOptions > 1 ? 's' : ''}</p>
-                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    <Clock className="w-3 h-3 inline" /> {t.distance} miles from home
+                                  </p>
                                 </div>
-                                <div className="text-right ml-4">
-                                  <p className="text-3xl font-bold text-green-600">£{Math.round(price)}</p>
-                                  <p className="text-xs text-gray-500 mt-1">per person</p>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-purple-600">£{Math.round(t.cost)}</p>
+                                  {t.diffFromAvg !== 0 && (
+                                    <div className="flex items-center gap-1 justify-end mt-1">
+                                      {t.diffFromAvg > 0 ? (
+                                        <TrendingDown className="w-4 h-4 text-red-500 rotate-180" />
+                                      ) : (
+                                        <TrendingDown className="w-4 h-4 text-green-500" />
+                                      )}
+                                      <p
+                                        className={`text-sm font-semibold ${
+                                          t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'
+                                        }`}
+                                      >
+                                        {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)}
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Flight Details Card */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl">
+                      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <Plane className="w-6 h-6 text-purple-600" />
+                        Best Flights to {destination}
+                      </h2>
+
+                      <div className="space-y-4">
+                        {travelers.filter((t) => t.selectedAirport).map((t, i) => {
+                          const data = flightData[t.id];
+                          if (!data || !data.cheapest) return null;
+
+                          const flight = data.cheapest;
+                          const price = parseFloat(flight.price.total);
+                          const segment = flight.itineraries[0].segments[0];
+                          const airport = flight.departureAirport;
+                          const colors = getTravelerColor(i);
+
+                          return (
+                            <div
+                              key={t.id}
+                              className={`p-5 rounded-2xl border-3 ${colors.border} bg-gradient-to-br from-white to-gray-50 shadow-lg hover:shadow-xl transition-all`}
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-sm`}>
+                                  {t.name || `From ${t.origin}`}
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-3xl font-bold text-green-600">£{Math.round(price)}</p>
+                                  <p className="text-xs text-gray-500">per person</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div className="text-center">
+                                      <p className="text-lg font-bold text-gray-800">{airport.code}</p>
+                                      <p className="text-xs text-gray-500">{airport.name}</p>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-purple-600" />
+                                    <div className="text-center">
+                                      <p className="text-lg font-bold text-gray-800">{segment.arrival.iataCode}</p>
+                                      <p className="text-xs text-gray-500">{destination}</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 mt-3">
+                                  <div className="bg-white p-3 rounded-xl border border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-1">Flight</p>
+                                    <p className="text-sm font-bold text-gray-800">
+                                      {segment.carrierCode} {segment.number}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white p-3 rounded-xl border border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-1">Duration</p>
+                                    <p className="text-sm font-bold text-gray-800">
+                                      {segment.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-xl mt-3">
+                                  <p className="text-xs text-green-700 font-semibold flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    Best option from {data.allAirportOptions} nearby airports
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </>
                 ) : (
