@@ -46,6 +46,12 @@ const AmadeusAPI = {
           },
         }
       );
+
+      if (!response.ok) {
+        console.error('❌ API returned error status:', response.status, response.statusText);
+        return [];
+      }
+
       const data = await response.json();
       return data.data || [];
     } catch (err) {
@@ -65,6 +71,11 @@ const AmadeusAPI = {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (!response.ok) {
+        console.error('❌ API returned error status:', response.status, response.statusText);
+        return [];
+      }
 
       const data = await response.json();
       console.log(`✈️ API Response for ${origin}->${destination}:`, data);
@@ -92,6 +103,11 @@ const AmadeusAPI = {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (!response.ok) {
+        console.error('❌ API returned error status:', response.status, response.statusText);
+        return [];
+      }
 
       const data = await response.json();
       console.log(`🗺️ Available destinations from ${origin}:`, data);
@@ -442,6 +458,7 @@ export default function HolidayPlanner() {
   const searchFlightsForDestination = async (destinationCity) => {
     setLoading(true);
     setError(null);
+    setSurveyShown(false); // Reset survey state for new search
 
     try {
       console.log('🚀 Starting flight search for:', destinationCity);
@@ -888,6 +905,7 @@ export default function HolidayPlanner() {
                 setStep(1);
                 setShowResults(false);
                 setFlightData({});
+                setSurveyShown(false); // Reset survey state when going back
               }}
               className="mb-6 px-5 py-3 text-white bg-white/20 backdrop-blur-sm rounded-xl text-sm font-semibold hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg"
             >
@@ -923,7 +941,10 @@ export default function HolidayPlanner() {
                   {filtered.map((d) => (
                     <button
                       key={d.city}
-                      onClick={() => setSelectedDestination(d.city)}
+                      onClick={() => {
+                        setSelectedDestination(d.city);
+                        setCustomDestination('');
+                      }}
                       className={`group relative p-5 rounded-2xl border-3 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
                         selectedDestination === d.city
                           ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
@@ -1059,11 +1080,13 @@ export default function HolidayPlanner() {
 
                       {/* Traveler Cost Breakdown */}
                       <div className="space-y-3">
-                        {fairness.travelers.map((t, i) => {
-                          const colors = getTravelerColor(i);
+                        {fairness.travelers.map((t) => {
+                          const traveler = travelers.find(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
+                          const originalIndex = travelers.findIndex(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
+                          const colors = getTravelerColor(originalIndex);
                           return (
                             <div
-                              key={i}
+                              key={traveler?.id || t.name}
                               className={`p-4 rounded-2xl border-2 ${colors.border} ${colors.bg} transition-all hover:shadow-lg`}
                             >
                               <div className="flex justify-between items-center">
@@ -1111,7 +1134,7 @@ export default function HolidayPlanner() {
                       </h2>
 
                       <div className="space-y-4">
-                        {travelers.filter((t) => t.selectedAirport).map((t, i) => {
+                        {travelers.filter((t) => t.selectedAirport).map((t) => {
                           const data = flightData[t.id];
                           if (!data || !data.cheapest) return null;
 
@@ -1119,7 +1142,8 @@ export default function HolidayPlanner() {
                           const price = parseFloat(flight.price.total);
                           const segment = flight.itineraries[0].segments[0];
                           const airport = flight.departureAirport;
-                          const colors = getTravelerColor(i);
+                          const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
+                          const colors = getTravelerColor(originalIndex);
 
                           return (
                             <div
@@ -1221,19 +1245,20 @@ export default function HolidayPlanner() {
               <p className="text-xs text-gray-600 mb-4 bg-blue-50 p-2 rounded">
                 💡 We find the fairest meeting spot, then link you to trusted booking sites. We may earn a small commission if you book - at no extra cost to you.
               </p>
-              
-              {travelers.filter(t => t.selectedAirport).map((t, i) => {
+
+              {travelers.filter(t => t.selectedAirport).map((t) => {
                 const data = flightData[t.id];
                 if (!data || !data.cheapest) return null;
-                
+
                 const flight = data.cheapest;
                 const price = Math.round(parseFloat(flight.price.total));
                 const airport = flight.departureAirport;
                 const destCode = flight.itineraries[0].segments[0].arrival.iataCode;
+                const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
 
                 return (
-                  <div key={i} className="p-4 bg-green-50 rounded-lg mb-3">
-                    <p className="font-bold">{t.name || `Person ${i + 1}`}</p>
+                  <div key={t.id} className="p-4 bg-green-50 rounded-lg mb-3">
+                    <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
                     <p className="text-sm text-gray-600">{airport.name} ({airport.code}) → {destination} • £{price}</p>
                     <div className="flex gap-2 mt-2">
                       <a 
