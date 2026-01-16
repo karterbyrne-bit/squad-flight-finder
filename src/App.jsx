@@ -243,7 +243,6 @@ export default function HolidayPlanner() {
 
   // Calculate weighted score (lower is better)
   const calculateWeightedScore = (price, distanceMiles) => {
-    // £1 per mile of extra travel distance (adjust this weighting as needed)
     const distancePenalty = distanceMiles * 0.5; // 50p per mile
     return price + distancePenalty;
   };
@@ -256,29 +255,30 @@ export default function HolidayPlanner() {
     
     try {
       // Check if we have predefined airports for this city (trim spaces and lowercase)
-const cityKey = Object.keys(cityToAirportsMap).find(
-  key => key.toLowerCase() === cityName.toLowerCase().trim()
-);
+      const cityKey = Object.keys(cityToAirportsMap).find(
+        key => key.toLowerCase() === cityName.toLowerCase().trim()
+      );
+      
       if (cityKey) {
         // Use predefined airport list with distances
         const airports = cityToAirportsMap[cityKey];
         updateTraveler(travelerId, 'airports', airports);
         updateTraveler(travelerId, 'selectedAirport', airports[0].code);
       } else {
-  // Fall back to API search - ONLY get AIRPORT codes, not city codes
-  const airports = await AmadeusAPI.searchAirports(cityName);
-  const formatted = airports
-    .filter(airport => airport.subType === 'AIRPORT') // Only airports!
-    .slice(0, 5)
-    .map(airport => ({
-      code: airport.iataCode,
-      name: airport.name,
-      distance: 15, // Default distance if unknown
-    }));
-  
-  if (formatted.length > 0) {
-    updateTraveler(travelerId, 'airports', formatted);
-    updateTraveler(travelerId, 'selectedAirport', formatted[0].code);
+        // Fall back to API search - ONLY get AIRPORT codes, not city codes
+        const airports = await AmadeusAPI.searchAirports(cityName);
+        const formatted = airports
+          .filter(airport => airport.subType === 'AIRPORT') // Only airports!
+          .slice(0, 5)
+          .map(airport => ({
+            code: airport.iataCode,
+            name: airport.name,
+            distance: 15, // Default distance if unknown
+          }));
+        
+        if (formatted.length > 0) {
+          updateTraveler(travelerId, 'airports', formatted);
+          updateTraveler(travelerId, 'selectedAirport', formatted[0].code);
         }
       }
     } catch (err) {
@@ -330,10 +330,11 @@ const cityKey = Object.keys(cityToAirportsMap).find(
       
       if (!destinationCode) {
         const destAirports = await AmadeusAPI.searchAirports(destinationCity);
-        if (destAirports.length === 0) {
+        const airportOnly = destAirports.filter(a => a.subType === 'AIRPORT');
+        if (airportOnly.length === 0) {
           throw new Error(`No airports found for ${destinationCity}`);
         }
-        destinationCode = destAirports[0].iataCode;
+        destinationCode = airportOnly[0].iataCode;
       }
 
       // Search flights for each traveler from ALL their nearby airports
