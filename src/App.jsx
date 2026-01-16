@@ -637,7 +637,15 @@ export default function HolidayPlanner() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-4 pb-20">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-4 sm:mb-6 pt-4 sm:pt-6">
+        {/* Demo Banner */}
+        <div className="mb-3 sm:mb-4 pt-4 sm:pt-6">
+          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-2.5 sm:p-3 flex items-start gap-2">
+            <Check className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-green-800"><strong>Live API:</strong> Powered by Amadeus • Real flight search • Multi-airport support • Distance weighting</p>
+          </div>
+        </div>
+
+        <div className="text-center mb-4 sm:mb-6">
           <div className="flex items-center justify-center gap-2 mb-1">
             <Plane className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Squad Flight Finder</h1>
@@ -700,31 +708,34 @@ export default function HolidayPlanner() {
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3">Your Squad</h2>
                 {travelers.map((t, i) => (
-                  <div key={t.id} className="space-y-2 mb-3">
+                  <div key={t.id} className="space-y-2 mb-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border-2 border-purple-200">
                     <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder={`Person ${i + 1}`} 
-                        value={t.name} 
-                        onChange={(e) => updateTraveler(t.id, 'name', e.target.value)} 
-                        className="w-24 sm:w-32 px-2 py-2 border-2 rounded-lg text-xs sm:text-sm" 
+                      <input
+                        type="text"
+                        placeholder={`Person ${i + 1}`}
+                        value={t.name}
+                        onChange={(e) => updateTraveler(t.id, 'name', e.target.value)}
+                        className="w-24 sm:w-32 px-2 py-2 border-2 rounded-lg text-xs sm:text-sm font-semibold"
                       />
-                      <input 
-                        type="text" 
-                        placeholder="From city" 
-                        value={t.origin} 
-                        onChange={(e) => updateTraveler(t.id, 'origin', e.target.value)} 
-                        className="flex-1 px-2 py-2 border-2 rounded-lg text-xs sm:text-sm" 
+                      <input
+                        type="text"
+                        placeholder="From city (e.g. London)"
+                        value={t.origin}
+                        onChange={(e) => updateTraveler(t.id, 'origin', e.target.value)}
+                        className="flex-1 px-2 py-2 border-2 rounded-lg text-xs sm:text-sm"
                       />
                       {travelers.length > 1 && (
-                        <button onClick={() => removeTraveler(t.id)} className="p-2 text-red-500">
+                        <button onClick={() => removeTraveler(t.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                     
                     {searchingAirports[t.id] && (
-                      <p className="text-xs text-gray-500">🔍 Finding nearby airports...</p>
+                      <div className="flex items-center gap-2 text-xs text-purple-600">
+                        <div className="animate-spin w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full"></div>
+                        Finding nearby airports...
+                      </div>
                     )}
                     
                     {t.airports && t.airports.length > 0 && (
@@ -825,10 +836,19 @@ export default function HolidayPlanner() {
                     <button
                       key={d.city}
                       onClick={() => setSelectedDestination(d.city)}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${selectedDestination === d.city ? 'border-pink-500 bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      className={`p-3 rounded-xl border-2 text-left transition-all transform hover:scale-105 ${
+                        selectedDestination === d.city
+                          ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-lg'
+                          : 'border-gray-200 hover:border-purple-300 hover:shadow-md'
+                      }`}
                     >
                       <p className="font-bold text-sm">{d.city}</p>
                       <p className="text-xs text-gray-500">{d.region}</p>
+                      {selectedDestination === d.city && (
+                        <div className="mt-1">
+                          <Check className="w-4 h-4 text-pink-600" />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -866,27 +886,47 @@ export default function HolidayPlanner() {
                       <Share2 className="w-4 inline" /> Share Booking Links
                     </button>
 
-                    <div className="bg-white rounded-2xl p-4 sm:p-5 mb-4">
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 mb-4 shadow-xl border-2 border-purple-100">
                       <div className="flex items-center gap-3 mb-3">
-                        <Scale className="w-5 text-purple-600" />
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <Scale className="w-5 text-purple-600" />
+                        </div>
                         <h2 className="text-xl font-bold">Fairness Score</h2>
-                        <div className={`ml-auto px-3 py-1 rounded font-bold ${fairness.score >= 80 ? 'bg-green-100 text-green-700' : fairness.score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                        <div className={`ml-auto px-4 py-1.5 rounded-full font-bold text-lg ${fairness.score >= 80 ? 'bg-green-100 text-green-700' : fairness.score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                           {fairness.score}%
                         </div>
                       </div>
-                      <p className="text-xs text-gray-600 mb-3">✨ Balanced by distance - closer airports save you travel time!</p>
+
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                        <div
+                          className={`h-2 rounded-full ${fairness.score >= 80 ? 'bg-green-600' : fairness.score >= 60 ? 'bg-yellow-600' : 'bg-red-600'}`}
+                          style={{ width: `${fairness.score}%` }}
+                        ></div>
+                      </div>
+
+                      <p className="text-xs text-gray-600 mb-3 bg-blue-50 p-2 rounded">✨ Balanced by distance - closer airports save you travel time!</p>
                       {fairness.travelers.map((t, i) => (
-                        <div key={i} className="flex justify-between p-3 bg-purple-50 rounded-lg mb-2">
+                        <div key={i} className="flex justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl mb-2 border-2 border-purple-200 hover:shadow-md transition-shadow">
                           <div>
-                            <p className="font-bold text-sm">{t.name}</p>
-                            <p className="text-xs text-gray-600">{t.airport}</p>
-                            <p className="text-xs text-gray-500">{t.distance} miles away</p>
+                            <p className="font-bold text-sm flex items-center gap-2">
+                              <span className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">{i + 1}</span>
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {t.airport}
+                            </p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3" />
+                              {t.distance} miles away
+                            </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-purple-600">£{Math.round(t.cost)}</p>
+                            <p className="font-bold text-purple-600 text-xl">£{Math.round(t.cost)}</p>
                             {t.diffFromAvg !== 0 && (
-                              <p className={`text-xs ${t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)}
+                              <p className={`text-xs font-semibold ${t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)} {t.diffFromAvg > 0 ? 'above' : 'below'} avg
                               </p>
                             )}
                           </div>
@@ -894,8 +934,13 @@ export default function HolidayPlanner() {
                       ))}
                     </div>
 
-                    <div className="bg-white rounded-2xl p-4 sm:p-5">
-                      <h2 className="text-xl font-bold mb-3">Best Flights to {destination}</h2>
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xl border-2 border-green-100">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Plane className="w-5 text-green-600" />
+                        </div>
+                        <h2 className="text-xl font-bold">Best Flights to {destination}</h2>
+                      </div>
                       {travelers.filter(t => t.selectedAirport).map(t => {
                         const data = flightData[t.id];
                         if (!data || !data.cheapest) return null;
@@ -906,17 +951,28 @@ export default function HolidayPlanner() {
                         const airport = flight.departureAirport;
 
                         return (
-                          <div key={t.id} className="mb-4">
-                            <p className="font-bold mb-2">{t.name || `From ${t.origin}`}</p>
-                            <div className="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                          <div key={t.id} className="mb-4 last:mb-0">
+                            <p className="font-bold mb-2 text-gray-700">{t.name || `From ${t.origin}`}</p>
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-300 hover:shadow-lg transition-shadow">
                               <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-sm font-bold">{airport.name} ({airport.code}) → {segment.arrival.iataCode}</p>
-                                  <p className="text-xs text-gray-600">{segment.carrierCode} {segment.number}</p>
-                                  <p className="text-xs text-gray-500">Duration: {segment.duration.replace('PT', '').toLowerCase()}</p>
-                                  <p className="text-xs text-green-600 mt-1">✓ Best option from {data.allAirportOptions} nearby airports</p>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Plane className="w-4 h-4 text-green-600" />
+                                    <p className="text-sm font-bold text-gray-800">{airport.name} ({airport.code}) → {segment.arrival.iataCode}</p>
+                                  </div>
+                                  <p className="text-xs text-gray-600 mb-1">✈️ {segment.carrierCode} {segment.number}</p>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {segment.duration.replace('PT', '').toLowerCase()}
+                                  </p>
+                                  <div className="mt-2 bg-white/60 backdrop-blur rounded-lg px-2 py-1 inline-block">
+                                    <p className="text-xs text-green-700 font-semibold">✓ Best option from {data.allAirportOptions} nearby airport{data.allAirportOptions > 1 ? 's' : ''}</p>
+                                  </div>
                                 </div>
-                                <p className="text-2xl font-bold text-green-600">£{Math.round(price)}</p>
+                                <div className="text-right ml-4">
+                                  <p className="text-3xl font-bold text-green-600">£{Math.round(price)}</p>
+                                  <p className="text-xs text-gray-500 mt-1">per person</p>
+                                </div>
                               </div>
                             </div>
                           </div>
