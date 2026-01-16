@@ -341,15 +341,25 @@ export default function HolidayPlanner() {
       let destinationCode = destinationAirportMap[destinationCity];
 
       if (!destinationCode) {
-        const destAirports = await AmadeusAPI.searchAirports(destinationCity);
-        const airportOnly = destAirports.filter(a => a.subType === 'AIRPORT');
-        if (airportOnly.length === 0) {
-          throw new Error(`No airports found for ${destinationCity}`);
+        const destLocations = await AmadeusAPI.searchAirports(destinationCity);
+
+        // Prefer CITY code over individual airports (PAR vs CDG) for broader results
+        const cityCode = destLocations.find(a => a.subType === 'CITY');
+        if (cityCode) {
+          destinationCode = cityCode.iataCode;
+          console.log('🏙️ Using city code for destination:', destinationCode);
+        } else {
+          // Fallback to first airport if no city code available
+          const airportOnly = destLocations.filter(a => a.subType === 'AIRPORT');
+          if (airportOnly.length === 0) {
+            throw new Error(`No airports found for ${destinationCity}`);
+          }
+          destinationCode = airportOnly[0].iataCode;
+          console.log('✈️ Using airport code for destination:', destinationCode);
         }
-        destinationCode = airportOnly[0].iataCode;
       }
 
-      console.log('🎯 Destination airport code:', destinationCode);
+      console.log('🎯 Destination code:', destinationCode);
 
       // Search flights for each traveler from ALL their nearby airports
       const flightPromises = travelers.map(async (traveler) => {
