@@ -79,6 +79,33 @@ const AmadeusAPI = {
       return [];
     }
   },
+
+  async searchDestinations(origin) {
+    try {
+      const token = await this.getAccessToken();
+      const url = `https://test.api.amadeus.com/v1/shopping/flight-destinations?origin=${origin}&max=50`;
+      console.log('🌍 Searching destinations from:', origin);
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log(`🗺️ Available destinations from ${origin}:`, data);
+
+      if (data.errors) {
+        console.error('❌ API returned errors:', data.errors);
+        return [];
+      }
+
+      return data.data || [];
+    } catch (err) {
+      console.error('❌ Destination search error:', err);
+      return [];
+    }
+  },
 };
 
 // Map cities to nearby airports with distances (in miles)
@@ -245,6 +272,8 @@ export default function HolidayPlanner() {
   const [error, setError] = useState(null);
   const [flightData, setFlightData] = useState({});
   const [searchingAirports, setSearchingAirports] = useState({});
+  const [availableDestinations, setAvailableDestinations] = useState([]);
+  const [loadingDestinations, setLoadingDestinations] = useState(false);
 
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
@@ -322,9 +351,73 @@ export default function HolidayPlanner() {
     }
   };
 
-  const goToDestinations = () => {
+  const goToDestinations = async () => {
     if (travelers.every(t => t.selectedAirport) && dateFrom && dateTo) {
       setStep(2);
+
+      // Fetch available destinations from all travelers' airports
+      setLoadingDestinations(true);
+      try {
+        const uniqueAirports = [...new Set(travelers.map(t => t.selectedAirport))];
+        console.log('🔍 Fetching destinations from airports:', uniqueAirports);
+
+        // Fetch destinations from each unique airport
+        const destinationPromises = uniqueAirports.map(airport =>
+          AmadeusAPI.searchDestinations(airport)
+        );
+
+        const results = await Promise.all(destinationPromises);
+
+        // Combine and deduplicate destinations
+        const allDestinations = results.flat();
+        const destinationMap = new Map();
+
+        allDestinations.forEach(dest => {
+          const iataCode = dest.destination;
+          if (!destinationMap.has(iataCode)) {
+            destinationMap.set(iataCode, {
+              code: iataCode,
+              count: 1,
+              price: parseFloat(dest.price?.total || 999)
+            });
+          } else {
+            const existing = destinationMap.get(iataCode);
+            existing.count++;
+            existing.price = Math.min(existing.price, parseFloat(dest.price?.total || 999));
+          }
+        });
+
+        // Convert to array and get city names
+        const topDestinations = Array.from(destinationMap.entries())
+          .sort((a, b) => b[1].count - a[1].count) // Sort by availability
+          .slice(0, 20)
+          .map(([code, data]) => ({
+            code,
+            ...data
+          }));
+
+        console.log('✅ Found destinations:', topDestinations);
+
+        // Get city names for these destinations
+        const destinationsWithNames = await Promise.all(
+          topDestinations.map(async (dest) => {
+            const cityName = Object.entries(destinationAirportMap).find(([city, code]) => code === dest.code)?.[0];
+            if (cityName) {
+              return { city: cityName, ...dest };
+            }
+            // If not in our map, try to look it up
+            return { city: dest.code, ...dest }; // Fallback to code
+          })
+        );
+
+        setAvailableDestinations(destinationsWithNames.filter(d => d.city));
+      } catch (err) {
+        console.error('❌ Failed to fetch destinations:', err);
+        // Fallback to empty, will use hard-coded list
+        setAvailableDestinations([]);
+      } finally {
+        setLoadingDestinations(false);
+      }
     }
   };
 
@@ -525,7 +618,18 @@ export default function HolidayPlanner() {
     { id: 'luxury', name: 'Luxury', icon: Gem },
   ];
 
-  const filtered = popularDestinations.filter(d => tripType === 'all' || d.types.includes(tripType));
+  // Use dynamic destinations if available, otherwise fallback to hard-coded
+  const destinationsToShow = availableDestinations.length > 0
+    ? availableDestinations.map(d => ({
+        city: d.city,
+        region: `From £${Math.round(d.price)}`,
+        types: ['available']
+      }))
+    : popularDestinations;
+
+  const filtered = tripType === 'all'
+    ? destinationsToShow
+    : destinationsToShow.filter(d => d.types.includes(tripType));
 
   const destination = selectedDestination || customDestination;
   const fairness = getFairnessDetails();
@@ -700,13 +804,27 @@ export default function HolidayPlanner() {
             
             {!showResults && (
               <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-5">
-                <h2 className="text-lg font-bold mb-3">Where do you want to go?</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold">Where do you want to go?</h2>
+                  {availableDestinations.length > 0 && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">
+                      ✓ Live Results
+                    </span>
+                  )}
+                </div>
+
+                {loadingDestinations && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    Finding available destinations...
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                   {filtered.map(d => (
-                    <button 
-                      key={d.city} 
-                      onClick={() => setSelectedDestination(d.city)} 
+                    <button
+                      key={d.city}
+                      onClick={() => setSelectedDestination(d.city)}
                       className={`p-3 rounded-lg border-2 text-left transition-all ${selectedDestination === d.city ? 'border-pink-500 bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}
                     >
                       <p className="font-bold text-sm">{d.city}</p>
