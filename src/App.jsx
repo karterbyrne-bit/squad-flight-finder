@@ -56,18 +56,26 @@ const AmadeusAPI = {
   async searchFlights(origin, destination, departureDate, adults = 1) {
     try {
       const token = await this.getAccessToken();
-      const response = await fetch(
-        `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+      const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`;
+      console.log('🔍 Searching flights:', { origin, destination, departureDate, url });
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
       const data = await response.json();
+      console.log(`✈️ API Response for ${origin}->${destination}:`, data);
+
+      if (data.errors) {
+        console.error('❌ API returned errors:', data.errors);
+        return [];
+      }
+
       return data.data || [];
     } catch (err) {
-      console.error('Flight search error:', err);
+      console.error('❌ Flight search error:', err);
       return [];
     }
   },
@@ -323,11 +331,15 @@ export default function HolidayPlanner() {
   const searchFlightsForDestination = async (destinationCity) => {
     setLoading(true);
     setError(null);
-    
+
     try {
+      console.log('🚀 Starting flight search for:', destinationCity);
+      console.log('📅 Date:', dateFrom);
+      console.log('👥 Travelers:', travelers);
+
       // Get destination airport code
       let destinationCode = destinationAirportMap[destinationCity];
-      
+
       if (!destinationCode) {
         const destAirports = await AmadeusAPI.searchAirports(destinationCity);
         const airportOnly = destAirports.filter(a => a.subType === 'AIRPORT');
@@ -337,15 +349,23 @@ export default function HolidayPlanner() {
         destinationCode = airportOnly[0].iataCode;
       }
 
+      console.log('🎯 Destination airport code:', destinationCode);
+
       // Search flights for each traveler from ALL their nearby airports
       const flightPromises = travelers.map(async (traveler) => {
         const airportsToCheck = traveler.airports || [];
-        if (airportsToCheck.length === 0) return null;
+        console.log(`👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`, airportsToCheck);
+
+        if (airportsToCheck.length === 0) {
+          console.warn(`⚠️ No airports found for ${traveler.name || traveler.origin}`);
+          return null;
+        }
 
         // Search from ALL nearby airports
         const allFlightSearches = airportsToCheck.map(async (airport) => {
           const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1);
-          
+          console.log(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
+
           // Add airport info and weighted score to each flight
           return flights.map(flight => ({
             ...flight,
@@ -356,8 +376,13 @@ export default function HolidayPlanner() {
 
         const allResults = await Promise.all(allFlightSearches);
         const allFlights = allResults.flat().filter(f => f);
-        
-        if (allFlights.length === 0) return null;
+
+        console.log(`  📊 Total flights for ${traveler.name || traveler.origin}:`, allFlights.length);
+
+        if (allFlights.length === 0) {
+          console.warn(`  ⚠️ No flights found for ${traveler.name || traveler.origin}`);
+          return null;
+        }
 
         // Sort by weighted score (price + distance penalty)
         const sortedFlights = allFlights.sort((a, b) => a.weightedScore - b.weightedScore);
@@ -372,16 +397,25 @@ export default function HolidayPlanner() {
 
       const results = await Promise.all(flightPromises);
       const flightMap = {};
+      let foundFlights = 0;
       results.forEach(result => {
         if (result) {
           flightMap[result.travelerId] = result;
+          foundFlights++;
         }
       });
 
+      console.log('✅ Flight search complete. Found flights for', foundFlights, 'out of', travelers.length, 'travelers');
+      console.log('📦 Flight data:', flightMap);
+
+      if (foundFlights === 0) {
+        setError('No flights found for the selected date and destination. Try a different date or destination.');
+      }
+
       setFlightData(flightMap);
       setShowResults(true);
-      
-      if (!surveyShown) {
+
+      if (!surveyShown && foundFlights > 0) {
         setTimeout(() => {
           setShowSurveyModal(true);
           setSurveyShown(true);
@@ -389,7 +423,7 @@ export default function HolidayPlanner() {
       }
     } catch (err) {
       setError(err.message);
-      console.error('Flight search failed:', err);
+      console.error('❌ Flight search failed:', err);
     } finally {
       setLoading(false);
     }
@@ -693,72 +727,101 @@ export default function HolidayPlanner() {
               </div>
             )}
 
-            {showResults && fairness && (
+            {showResults && (
               <>
-                <button 
-                  onClick={() => setShowShareModal(true)} 
-                  className="mb-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold hover:opacity-90"
-                >
-                  <Share2 className="w-4 inline" /> Share Booking Links
-                </button>
+                {fairness ? (
+                  <>
+                    <button
+                      onClick={() => setShowShareModal(true)}
+                      className="mb-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold hover:opacity-90"
+                    >
+                      <Share2 className="w-4 inline" /> Share Booking Links
+                    </button>
 
-                <div className="bg-white rounded-2xl p-4 sm:p-5 mb-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Scale className="w-5 text-purple-600" />
-                    <h2 className="text-xl font-bold">Fairness Score</h2>
-                    <div className={`ml-auto px-3 py-1 rounded font-bold ${fairness.score >= 80 ? 'bg-green-100 text-green-700' : fairness.score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                      {fairness.score}%
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-3">✨ Balanced by distance - closer airports save you travel time!</p>
-                  {fairness.travelers.map((t, i) => (
-                    <div key={i} className="flex justify-between p-3 bg-purple-50 rounded-lg mb-2">
-                      <div>
-                        <p className="font-bold text-sm">{t.name}</p>
-                        <p className="text-xs text-gray-600">{t.airport}</p>
-                        <p className="text-xs text-gray-500">{t.distance} miles away</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-purple-600">£{Math.round(t.cost)}</p>
-                        {t.diffFromAvg !== 0 && (
-                          <p className={`text-xs ${t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 sm:p-5">
-                  <h2 className="text-xl font-bold mb-3">Best Flights to {destination}</h2>
-                  {travelers.filter(t => t.selectedAirport).map(t => {
-                    const data = flightData[t.id];
-                    if (!data || !data.cheapest) return null;
-
-                    const flight = data.cheapest;
-                    const price = parseFloat(flight.price.total);
-                    const segment = flight.itineraries[0].segments[0];
-                    const airport = flight.departureAirport;
-
-                    return (
-                      <div key={t.id} className="mb-4">
-                        <p className="font-bold mb-2">{t.name || `From ${t.origin}`}</p>
-                        <div className="p-3 bg-green-50 rounded-lg border-2 border-green-200">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-bold">{airport.name} ({airport.code}) → {segment.arrival.iataCode}</p>
-                              <p className="text-xs text-gray-600">{segment.carrierCode} {segment.number}</p>
-                              <p className="text-xs text-gray-500">Duration: {segment.duration.replace('PT', '').toLowerCase()}</p>
-                              <p className="text-xs text-green-600 mt-1">✓ Best option from {data.allAirportOptions} nearby airports</p>
-                            </div>
-                            <p className="text-2xl font-bold text-green-600">£{Math.round(price)}</p>
-                          </div>
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 mb-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Scale className="w-5 text-purple-600" />
+                        <h2 className="text-xl font-bold">Fairness Score</h2>
+                        <div className={`ml-auto px-3 py-1 rounded font-bold ${fairness.score >= 80 ? 'bg-green-100 text-green-700' : fairness.score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                          {fairness.score}%
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <p className="text-xs text-gray-600 mb-3">✨ Balanced by distance - closer airports save you travel time!</p>
+                      {fairness.travelers.map((t, i) => (
+                        <div key={i} className="flex justify-between p-3 bg-purple-50 rounded-lg mb-2">
+                          <div>
+                            <p className="font-bold text-sm">{t.name}</p>
+                            <p className="text-xs text-gray-600">{t.airport}</p>
+                            <p className="text-xs text-gray-500">{t.distance} miles away</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-purple-600">£{Math.round(t.cost)}</p>
+                            {t.diffFromAvg !== 0 && (
+                              <p className={`text-xs ${t.diffFromAvg > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {t.diffFromAvg > 0 ? '+' : ''}£{Math.round(t.diffFromAvg)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-4 sm:p-5">
+                      <h2 className="text-xl font-bold mb-3">Best Flights to {destination}</h2>
+                      {travelers.filter(t => t.selectedAirport).map(t => {
+                        const data = flightData[t.id];
+                        if (!data || !data.cheapest) return null;
+
+                        const flight = data.cheapest;
+                        const price = parseFloat(flight.price.total);
+                        const segment = flight.itineraries[0].segments[0];
+                        const airport = flight.departureAirport;
+
+                        return (
+                          <div key={t.id} className="mb-4">
+                            <p className="font-bold mb-2">{t.name || `From ${t.origin}`}</p>
+                            <div className="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="text-sm font-bold">{airport.name} ({airport.code}) → {segment.arrival.iataCode}</p>
+                                  <p className="text-xs text-gray-600">{segment.carrierCode} {segment.number}</p>
+                                  <p className="text-xs text-gray-500">Duration: {segment.duration.replace('PT', '').toLowerCase()}</p>
+                                  <p className="text-xs text-green-600 mt-1">✓ Best option from {data.allAirportOptions} nearby airports</p>
+                                </div>
+                                <p className="text-2xl font-bold text-green-600">£{Math.round(price)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-white rounded-2xl p-4 sm:p-5">
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Info className="w-8 h-8 text-yellow-600" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-2">No Flights Found</h3>
+                      <p className="text-gray-600 mb-4">We couldn't find any flights for the selected date and destination.</p>
+                      <div className="text-left bg-blue-50 p-4 rounded-lg mb-4">
+                        <p className="font-bold text-sm mb-2">Try these tips:</p>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          <li>• Select a date further in the future (airlines release flights up to 11 months ahead)</li>
+                          <li>• Try a different destination</li>
+                          <li>• Check the browser console (F12) for detailed API responses</li>
+                          <li>• Make sure you entered valid city names</li>
+                        </ul>
+                      </div>
+                      <button
+                        onClick={() => { setShowResults(false); setFlightData({}); }}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-xl font-bold hover:opacity-90"
+                      >
+                        <ArrowLeft className="w-4 inline" /> Try Different Search
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </>
