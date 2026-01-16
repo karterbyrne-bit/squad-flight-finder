@@ -24,8 +24,12 @@ const AmadeusAPI = {
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
-    
+
     if (data.error) {
       throw new Error(data.error_description || 'Authentication failed');
     }
@@ -1083,7 +1087,7 @@ export default function HolidayPlanner() {
                         {fairness.travelers.map((t) => {
                           const traveler = travelers.find(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
                           const originalIndex = travelers.findIndex(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
-                          const colors = getTravelerColor(originalIndex);
+                          const colors = getTravelerColor(Math.max(0, originalIndex));
                           return (
                             <div
                               key={traveler?.id || t.name}
@@ -1143,7 +1147,7 @@ export default function HolidayPlanner() {
                           const segment = flight.itineraries[0].segments[0];
                           const airport = flight.departureAirport;
                           const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
-                          const colors = getTravelerColor(originalIndex);
+                          const colors = getTravelerColor(Math.max(0, originalIndex));
 
                           return (
                             <div
@@ -1258,7 +1262,7 @@ export default function HolidayPlanner() {
 
                 return (
                   <div key={t.id} className="p-4 bg-green-50 rounded-lg mb-3">
-                    <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
+                    <p className="font-bold">{t.name || `Person ${Math.max(0, originalIndex) + 1}`}</p>
                     <p className="text-sm text-gray-600">{airport.name} ({airport.code}) → {destination} • £{price}</p>
                     <div className="flex gap-2 mt-2">
                       <a 
