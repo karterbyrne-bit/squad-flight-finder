@@ -266,9 +266,68 @@ const destinationAirportMap = {
   'Malta': 'MLA'
 };
 
+// Destination types mapping - categorize destinations by trip type
+const destinationTypes = {
+  // City breaks
+  'Barcelona': ['city', 'beach'],
+  'Amsterdam': ['city'],
+  'Prague': ['city', 'cheap'],
+  'Berlin': ['city'],
+  'Budapest': ['city', 'cheap'],
+  'Lisbon': ['city', 'beach'],
+  'Paris': ['city', 'luxury'],
+  'Rome': ['city'],
+  'Dublin': ['city'],
+  'Edinburgh': ['city'],
+  'Madrid': ['city'],
+  'Vienna': ['city', 'luxury'],
+  'Brussels': ['city'],
+  'Copenhagen': ['city'],
+  'Stockholm': ['city'],
+  'Oslo': ['city'],
+  'Helsinki': ['city'],
+  'Athens': ['city', 'beach', 'cheap'],
+  'Venice': ['city', 'luxury'],
+  'Milan': ['city', 'luxury'],
+  'Florence': ['city'],
+  'Porto': ['city', 'cheap'],
+  'Warsaw': ['city', 'cheap'],
+  'Krakow': ['city', 'cheap'],
+  'Munich': ['city'],
+  'Hamburg': ['city'],
+  'Frankfurt': ['city'],
+  'Zurich': ['city', 'luxury', 'ski'],
+  'Geneva': ['city', 'luxury', 'ski'],
+  'Zagreb': ['city', 'cheap'],
+  'Belgrade': ['city', 'cheap'],
+  'Bucharest': ['city', 'cheap'],
+  'Sofia': ['city', 'cheap'],
+  'Riga': ['city', 'cheap'],
+  'Tallinn': ['city', 'cheap'],
+  'Vilnius': ['city', 'cheap'],
+  'Luxembourg': ['city'],
+
+  // Beach destinations
+  'Nice': ['beach', 'luxury'],
+  'Marseille': ['beach'],
+  'Naples': ['beach'],
+  'Dubrovnik': ['beach'],
+  'Split': ['beach'],
+  'Malta': ['beach', 'cheap'],
+
+  // Ski destinations
+  'Reykjavik': ['ski', 'luxury'],
+};
+
+// Get destination types for a city
+const getDestinationTypes = (cityName) => {
+  return destinationTypes[cityName] || ['city']; // Default to city if not found
+};
+
 export default function HolidayPlanner() {
   const [step, setStep] = useState(1);
   const [travelers, setTravelers] = useState([{ id: 1, name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '' }]);
+  const [tripType, setTripType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [maxBudget, setMaxBudget] = useState(150);
@@ -487,6 +546,7 @@ export default function HolidayPlanner() {
               city: cityName || dest.code,
               code: dest.code,
               count: dest.count,
+              types: cityName ? getDestinationTypes(cityName) : ['city'],
               ...priceMetrics
             };
           })
@@ -675,7 +735,7 @@ export default function HolidayPlanner() {
 
   const generateShareLink = () => {
     const dest = selectedDestination || customDestination;
-    const data = { travelers, dateFrom, dateTo, maxBudget, destination: dest };
+    const data = { travelers, tripType, dateFrom, dateTo, maxBudget, destination: dest };
     return `${window.location.origin}${window.location.pathname}?trip=${btoa(JSON.stringify(data))}`;
   };
 
@@ -685,21 +745,26 @@ export default function HolidayPlanner() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Sort destinations based on selected sorting method
+  // Sort and filter destinations based on selected sorting method and trip type
   const getSortedDestinations = () => {
     if (availableDestinations.length === 0) return [];
 
-    const sorted = [...availableDestinations];
-
-    if (sortBy === 'avgPrice') {
-      sorted.sort((a, b) => a.avgPrice - b.avgPrice);
-    } else if (sortBy === 'deviation') {
-      sorted.sort((a, b) => a.deviation - b.deviation);
-    } else if (sortBy === 'minPrice') {
-      sorted.sort((a, b) => a.minPrice - b.minPrice);
+    // First filter by trip type
+    let filtered = [...availableDestinations];
+    if (tripType !== 'all') {
+      filtered = filtered.filter(d => d.types && d.types.includes(tripType));
     }
 
-    return sorted;
+    // Then sort
+    if (sortBy === 'avgPrice') {
+      filtered.sort((a, b) => a.avgPrice - b.avgPrice);
+    } else if (sortBy === 'deviation') {
+      filtered.sort((a, b) => a.deviation - b.deviation);
+    } else if (sortBy === 'minPrice') {
+      filtered.sort((a, b) => a.minPrice - b.minPrice);
+    }
+
+    return filtered;
   };
 
   const destinationsToShow = getSortedDestinations();
@@ -897,6 +962,94 @@ export default function HolidayPlanner() {
                 </div>
               </div>
 
+              {/* Trip Preferences */}
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-purple-600" />
+                  Trip Preferences
+                </h2>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  <button
+                    onClick={() => setTripType('all')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'all'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Globe className={`w-5 h-5 mx-auto mb-1 ${tripType === 'all' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'all' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      All
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setTripType('city')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'city'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Briefcase className={`w-5 h-5 mx-auto mb-1 ${tripType === 'city' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'city' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      City
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setTripType('beach')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'beach'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Palmtree className={`w-5 h-5 mx-auto mb-1 ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      Beach
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setTripType('ski')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'ski'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Mountain className={`w-5 h-5 mx-auto mb-1 ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      Ski
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setTripType('cheap')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'cheap'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Coffee className={`w-5 h-5 mx-auto mb-1 ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      Budget
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setTripType('luxury')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      tripType === 'luxury'
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Gem className={`w-5 h-5 mx-auto mb-1 ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-400'}`} />
+                    <p className={`text-xs font-bold ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-600'}`}>
+                      Luxury
+                    </p>
+                  </button>
+                </div>
+              </div>
+
               {/* Find Destinations Button */}
               <div className="pt-4">
                 <button
@@ -951,6 +1104,17 @@ export default function HolidayPlanner() {
                     <div className="mt-4 flex items-center justify-center gap-2 text-sm text-purple-600">
                       <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
                       Calculating prices for all destinations...
+                    </div>
+                  )}
+                  {!loadingDestinations && availableDestinations.length > 0 && tripType !== 'all' && (
+                    <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                      <span>Filtering: {tripType.charAt(0).toUpperCase() + tripType.slice(1)}</span>
+                      <button
+                        onClick={() => setTripType('all')}
+                        className="hover:bg-purple-200 rounded-full p-1 transition-all"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1079,8 +1243,20 @@ export default function HolidayPlanner() {
                           </div>
                         </div>
 
-                        {/* Fairness Badge */}
+                        {/* Type and Fairness Badges */}
                         <div className="flex flex-wrap gap-1">
+                          {d.types && d.types.slice(0, 2).map((type) => (
+                            <span
+                              key={type}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                selectedDestination === d.city
+                                  ? 'bg-purple-200 text-purple-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {type}
+                            </span>
+                          ))}
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                               d.deviation < 50
