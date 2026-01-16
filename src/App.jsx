@@ -268,22 +268,21 @@ const destinationAirportMap = {
 
 export default function HolidayPlanner() {
   const [step, setStep] = useState(1);
-  const [activeTab, setActiveTab] = useState('squad');
   const [travelers, setTravelers] = useState([{ id: 1, name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '' }]);
-  const [tripType, setTripType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [maxBudget, setMaxBudget] = useState(150);
   const [customDestination, setCustomDestination] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState('');
-  const [sortBy, setSortBy] = useState('price');
+  const [sortBy, setSortBy] = useState('avgPrice');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [surveyShown, setSurveyShown] = useState(false);
   const [surveyData, setSurveyData] = useState({ wouldUse: '', wouldBook: '', email: '', feedback: '' });
   const [surveySubmitted, setSurveySubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAnywhere, setShowAnywhere] = useState(false);
 
   // API integration state
   const [loading, setLoading] = useState(false);
@@ -372,6 +371,64 @@ export default function HolidayPlanner() {
     }
   };
 
+  // Calculate price metrics for a destination across all travelers
+  const calculateDestinationPrices = async (destinationCode) => {
+    try {
+      const pricePromises = travelers.map(async (traveler) => {
+        const airportsToCheck = traveler.airports || [];
+        if (airportsToCheck.length === 0) return null;
+
+        // Search from all nearby airports for this traveler
+        const flightSearches = airportsToCheck.map(async (airport) => {
+          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1);
+          if (flights.length === 0) return null;
+
+          // Get cheapest flight from this airport
+          const cheapest = flights.reduce((min, flight) => {
+            const price = parseFloat(flight.price.total);
+            return price < parseFloat(min.price.total) ? flight : min;
+          }, flights[0]);
+
+          return {
+            price: parseFloat(cheapest.price.total),
+            weightedScore: calculateWeightedScore(parseFloat(cheapest.price.total), airport.distance)
+          };
+        });
+
+        const results = await Promise.all(flightSearches);
+        const validResults = results.filter(r => r !== null);
+
+        if (validResults.length === 0) return null;
+
+        // Get best option (lowest weighted score)
+        return validResults.reduce((best, current) =>
+          current.weightedScore < best.weightedScore ? current : best
+        );
+      });
+
+      const prices = await Promise.all(pricePromises);
+      const validPrices = prices.filter(p => p !== null).map(p => p.price);
+
+      if (validPrices.length === 0) return null;
+
+      const avgPrice = validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length;
+      const minPrice = Math.min(...validPrices);
+      const maxPrice = Math.max(...validPrices);
+      const deviation = maxPrice - minPrice;
+
+      return {
+        avgPrice: Math.round(avgPrice),
+        minPrice: Math.round(minPrice),
+        maxPrice: Math.round(maxPrice),
+        deviation: Math.round(deviation),
+        priceCount: validPrices.length
+      };
+    } catch (err) {
+      console.error(`Error calculating prices for ${destinationCode}:`, err);
+      return null;
+    }
+  };
+
   const goToDestinations = async () => {
     if (travelers.every(t => t.selectedAirport) && dateFrom && dateTo) {
       setStep(2);
@@ -399,19 +456,17 @@ export default function HolidayPlanner() {
             destinationMap.set(iataCode, {
               code: iataCode,
               count: 1,
-              price: parseFloat(dest.price?.total || 999)
             });
           } else {
             const existing = destinationMap.get(iataCode);
             existing.count++;
-            existing.price = Math.min(existing.price, parseFloat(dest.price?.total || 999));
           }
         });
 
-        // Convert to array and get city names
+        // Convert to array and take top destinations by availability
         const topDestinations = Array.from(destinationMap.entries())
-          .sort((a, b) => b[1].count - a[1].count) // Sort by availability
-          .slice(0, 20)
+          .sort((a, b) => b[1].count - a[1].count)
+          .slice(0, 30) // Get more destinations for better selection
           .map(([code, data]) => ({
             code,
             ...data
@@ -419,22 +474,30 @@ export default function HolidayPlanner() {
 
         console.log('✅ Found destinations:', topDestinations);
 
-        // Get city names for these destinations
-        const destinationsWithNames = await Promise.all(
+        // Get city names and calculate price metrics for each destination
+        console.log('💰 Calculating price metrics for destinations...');
+        const destinationsWithPrices = await Promise.all(
           topDestinations.map(async (dest) => {
             const cityName = Object.entries(destinationAirportMap).find(([city, code]) => code === dest.code)?.[0];
-            if (cityName) {
-              return { city: cityName, ...dest };
-            }
-            // If not in our map, try to look it up
-            return { city: dest.code, ...dest }; // Fallback to code
+            const priceMetrics = await calculateDestinationPrices(dest.code);
+
+            if (!priceMetrics) return null;
+
+            return {
+              city: cityName || dest.code,
+              code: dest.code,
+              count: dest.count,
+              ...priceMetrics
+            };
           })
         );
 
-        setAvailableDestinations(destinationsWithNames.filter(d => d.city));
+        const validDestinations = destinationsWithPrices.filter(d => d !== null);
+        console.log('✅ Price metrics calculated for', validDestinations.length, 'destinations');
+
+        setAvailableDestinations(validDestinations);
       } catch (err) {
         console.error('❌ Failed to fetch destinations:', err);
-        // Fallback to empty, will use hard-coded list
         setAvailableDestinations([]);
       } finally {
         setLoadingDestinations(false);
@@ -612,7 +675,7 @@ export default function HolidayPlanner() {
 
   const generateShareLink = () => {
     const dest = selectedDestination || customDestination;
-    const data = { travelers, tripType, dateFrom, dateTo, maxBudget, destination: dest };
+    const data = { travelers, dateFrom, dateTo, maxBudget, destination: dest };
     return `${window.location.origin}${window.location.pathname}?trip=${btoa(JSON.stringify(data))}`;
   };
 
@@ -622,39 +685,24 @@ export default function HolidayPlanner() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const popularDestinations = [
-    { city: 'Barcelona', region: 'Spain', types: ['city', 'beach'] },
-    { city: 'Amsterdam', region: 'Netherlands', types: ['city'] },
-    { city: 'Prague', region: 'Czech Republic', types: ['city', 'cheap'] },
-    { city: 'Berlin', region: 'Germany', types: ['city'] },
-    { city: 'Budapest', region: 'Hungary', types: ['city', 'cheap'] },
-    { city: 'Lisbon', region: 'Portugal', types: ['city'] },
-    { city: 'Paris', region: 'France', types: ['city', 'luxury'] },
-    { city: 'Rome', region: 'Italy', types: ['city'] },
-    { city: 'Dublin', region: 'Ireland', types: ['city'] },
-    { city: 'Edinburgh', region: 'Scotland', types: ['city'] },
-  ];
+  // Sort destinations based on selected sorting method
+  const getSortedDestinations = () => {
+    if (availableDestinations.length === 0) return [];
 
-  const tripTypes = [
-    { id: 'all', name: 'All', icon: Globe },
-    { id: 'city', name: 'City', icon: Briefcase },
-    { id: 'beach', name: 'Beach', icon: Palmtree },
-    { id: 'cheap', name: 'Budget', icon: Coffee },
-    { id: 'luxury', name: 'Luxury', icon: Gem },
-  ];
+    const sorted = [...availableDestinations];
 
-  // Use dynamic destinations if available, otherwise fallback to hard-coded
-  const destinationsToShow = availableDestinations.length > 0
-    ? availableDestinations.map(d => ({
-        city: d.city,
-        region: `From £${Math.round(d.price)}`,
-        types: ['available']
-      }))
-    : popularDestinations;
+    if (sortBy === 'avgPrice') {
+      sorted.sort((a, b) => a.avgPrice - b.avgPrice);
+    } else if (sortBy === 'deviation') {
+      sorted.sort((a, b) => a.deviation - b.deviation);
+    } else if (sortBy === 'minPrice') {
+      sorted.sort((a, b) => a.minPrice - b.minPrice);
+    }
 
-  const filtered = tripType === 'all'
-    ? destinationsToShow
-    : destinationsToShow.filter(d => d.types.includes(tripType));
+    return sorted;
+  };
+
+  const destinationsToShow = getSortedDestinations();
 
   const destination = selectedDestination || customDestination;
   const fairness = getFairnessDetails();
@@ -849,35 +897,6 @@ export default function HolidayPlanner() {
                 </div>
               </div>
 
-              {/* Trip Preferences */}
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-purple-600" />
-                  Trip Preferences
-                </h2>
-                <div className="grid grid-cols-5 gap-2">
-                  {tripTypes.map((t) => {
-                    const Icon = t.icon;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setTripType(t.id)}
-                        className={`p-3 rounded-xl border-2 transition-all ${
-                          tripType === t.id
-                            ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        <Icon className={`w-5 h-5 mx-auto mb-1 ${tripType === t.id ? 'text-purple-600' : 'text-gray-400'}`} />
-                        <p className={`text-xs font-bold ${tripType === t.id ? 'text-purple-600' : 'text-gray-600'}`}>
-                          {t.name}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Find Destinations Button */}
               <div className="pt-4">
                 <button
@@ -923,77 +942,177 @@ export default function HolidayPlanner() {
                     {availableDestinations.length > 0 && (
                       <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold flex items-center gap-1">
                         <Check className="w-3 h-3" />
-                        Live Results
+                        {availableDestinations.length} Destinations
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-600">Select a city or enter a custom destination</p>
+                  <p className="text-gray-600">Ranked by price - find the best deal for your squad</p>
                   {loadingDestinations && (
                     <div className="mt-4 flex items-center justify-center gap-2 text-sm text-purple-600">
                       <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
-                      Finding available destinations...
+                      Calculating prices for all destinations...
                     </div>
                   )}
                 </div>
 
-                {/* Destination Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                  {filtered.map((d) => (
-                    <button
-                      key={d.city}
-                      onClick={() => {
-                        setSelectedDestination(d.city);
-                        setCustomDestination('');
-                      }}
-                      className={`group relative p-5 rounded-2xl border-3 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
-                        selectedDestination === d.city
-                          ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
-                          : 'border-gray-200 bg-white hover:border-pink-300'
-                      }`}
-                    >
-                      {/* City Icon */}
-                      <div
-                        className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center transition-all ${
-                          selectedDestination === d.city
-                            ? 'bg-gradient-to-r from-pink-500 to-purple-500'
-                            : 'bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-pink-400 group-hover:to-purple-400'
+                {/* Sorting Controls */}
+                {!loadingDestinations && availableDestinations.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <ArrowUpDown className="w-4 h-4 text-purple-600" />
+                        Sort by:
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setSortBy('avgPrice')}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          sortBy === 'avgPrice'
+                            ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        {d.types.includes('beach') && <Palmtree className="w-6 h-6 text-white" />}
-                        {d.types.includes('city') && !d.types.includes('beach') && <Briefcase className="w-6 h-6 text-white" />}
-                        {d.types.includes('luxury') && <Gem className="w-6 h-6 text-white" />}
-                        {d.types.includes('cheap') && !d.types.includes('luxury') && <Coffee className="w-6 h-6 text-white" />}
-                      </div>
+                        <DollarSign className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-400'}`} />
+                        <p className={`text-xs font-bold ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-600'}`}>
+                          Avg Price
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => setSortBy('deviation')}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          sortBy === 'deviation'
+                            ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <Scale className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-400'}`} />
+                        <p className={`text-xs font-bold ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-600'}`}>
+                          Fairness
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => setSortBy('minPrice')}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          sortBy === 'minPrice'
+                            ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <TrendingDown className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-400'}`} />
+                        <p className={`text-xs font-bold ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-600'}`}>
+                          Cheapest
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                      {/* City Name */}
-                      <p className="font-bold text-base mb-1 text-gray-800">{d.city}</p>
-                      <p className="text-xs text-gray-500 mb-2">{d.region}</p>
+                {/* "Anywhere" Option */}
+                {!loadingDestinations && availableDestinations.length > 0 && (
+                  <div className="mb-6">
+                    <button
+                      onClick={() => {
+                        setSelectedDestination('');
+                        setCustomDestination('');
+                        setShowAnywhere(!showAnywhere);
+                      }}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 ${
+                        showAnywhere
+                          ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-yellow-50 shadow-md'
+                          : 'border-gray-300 bg-gradient-to-r from-purple-50 to-pink-50 hover:border-purple-300'
+                      }`}
+                    >
+                      <Globe className={`w-5 h-5 ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`} />
+                      <span className={`font-bold ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}>
+                        {showAnywhere ? 'Showing All Destinations' : 'Show All Destinations (Anywhere)'}
+                      </span>
+                    </button>
+                  </div>
+                )}
 
-                      {/* Type Badges */}
-                      <div className="flex flex-wrap gap-1">
-                        {d.types.map((type) => (
+                {/* Destination Cards Grid */}
+                {!loadingDestinations && availableDestinations.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                    {destinationsToShow.slice(0, showAnywhere ? destinationsToShow.length : 12).map((d) => (
+                      <button
+                        key={d.code}
+                        onClick={() => {
+                          setSelectedDestination(d.city);
+                          setCustomDestination('');
+                        }}
+                        className={`group relative p-4 rounded-2xl border-2 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
+                          selectedDestination === d.city
+                            ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
+                            : 'border-gray-200 bg-white hover:border-pink-300'
+                        }`}
+                      >
+                        {/* City Icon */}
+                        <div
+                          className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center transition-all ${
+                            selectedDestination === d.city
+                              ? 'bg-gradient-to-r from-pink-500 to-purple-500'
+                              : 'bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-pink-400 group-hover:to-purple-400'
+                          }`}
+                        >
+                          <MapPin className="w-5 h-5 text-white" />
+                        </div>
+
+                        {/* City Name */}
+                        <p className="font-bold text-sm mb-2 text-gray-800">{d.city}</p>
+
+                        {/* Price Metrics */}
+                        <div className="space-y-1 mb-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Avg:</span>
+                            <span className="font-bold text-purple-600">£{d.avgPrice}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Range:</span>
+                            <span className="font-semibold text-gray-700">£{d.minPrice}-£{d.maxPrice}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Diff:</span>
+                            <span className={`font-bold ${d.deviation < 50 ? 'text-green-600' : d.deviation < 100 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              £{d.deviation}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Fairness Badge */}
+                        <div className="flex flex-wrap gap-1">
                           <span
-                            key={type}
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                              selectedDestination === d.city
-                                ? 'bg-pink-500 text-white'
-                                : 'bg-gray-100 text-gray-600'
+                              d.deviation < 50
+                                ? 'bg-green-100 text-green-700'
+                                : d.deviation < 100
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
                             }`}
                           >
-                            {type}
+                            {d.deviation < 50 ? 'Very Fair' : d.deviation < 100 ? 'Fair' : 'Uneven'}
                           </span>
-                        ))}
-                      </div>
-
-                      {/* Selected Checkmark */}
-                      {selectedDestination === d.city && (
-                        <div className="absolute top-3 right-3 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white" />
                         </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
+
+                        {/* Selected Checkmark */}
+                        {selectedDestination === d.city && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* No destinations fallback */}
+                {!loadingDestinations && availableDestinations.length === 0 && (
+                  <div className="text-center py-8 bg-yellow-50 rounded-2xl border-2 border-yellow-200 mb-6">
+                    <Info className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                    <p className="text-gray-700 font-semibold">No destinations found with pricing data</p>
+                    <p className="text-sm text-gray-600 mt-2">Try entering a custom destination below</p>
+                  </div>
+                )}
 
                 {/* Custom Destination Input */}
                 <div className="mb-6">
