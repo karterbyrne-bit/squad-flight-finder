@@ -347,8 +347,11 @@ export default function HolidayPlanner() {
 
   const updateTraveler = (id, field, value) => {
     setTravelers(travelers.map(t => t.id === id ? { ...t, [field]: value } : t));
-    
-    if (field === 'origin' && value.length >= 3) {
+  };
+
+  const handleOriginChange = (id, value) => {
+    updateTraveler(id, 'origin', value);
+    if (value.length >= 3) {
       debouncedAirportSearch(id, value);
     }
   };
@@ -642,14 +645,14 @@ export default function HolidayPlanner() {
   const canProceed = travelers.every(t => t.selectedAirport) && dateFrom && dateTo;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-6 pb-20">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-8">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Plane className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-float" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Squad Flight Finder</h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-4 pb-20">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-4 sm:mb-6 pt-4 sm:pt-6">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Plane className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Squad Flight Finder</h1>
           </div>
-          <p className="text-white/95 text-sm sm:text-base font-medium">Find the fairest meeting spot • Searches ALL nearby airports</p>
+          <p className="text-white/90 text-xs sm:text-sm">Find the fairest meeting spot</p>
         </div>
 
         {error && (
@@ -750,7 +753,7 @@ export default function HolidayPlanner() {
                               type="text"
                               placeholder="From which city?"
                               value={t.origin}
-                              onChange={(e) => updateTraveler(t.id, 'origin', e.target.value)}
+                              onChange={(e) => handleOriginChange(t.id, e.target.value)}
                               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                             />
 
