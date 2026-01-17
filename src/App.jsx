@@ -2,6 +2,160 @@ import React, { useState, useRef } from 'react';
 import { Plane, Users, Plus, X, Search, DollarSign, Scale, Calendar, Briefcase, Palmtree, Mountain, Gem, Coffee, Share2, Copy, Check, Info, ArrowRight, ArrowLeft, Globe, ArrowUpDown, ExternalLink, TrendingDown, Clock, MapPin } from 'lucide-react';
 import './App.css';
 
+// API CALL TRACKING
+const apiCallTracker = {
+  totalCalls: 0,
+  callsByEndpoint: {},
+  cacheHits: 0,
+
+  trackCall(endpoint) {
+    this.totalCalls++;
+    this.callsByEndpoint[endpoint] = (this.callsByEndpoint[endpoint] || 0) + 1;
+    // Dispatch event for UI updates
+    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
+      detail: {
+        total: this.totalCalls,
+        cacheHits: this.cacheHits,
+        byEndpoint: this.callsByEndpoint
+      }
+    }));
+  },
+
+  trackCacheHit() {
+    this.cacheHits++;
+    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
+      detail: {
+        total: this.totalCalls,
+        cacheHits: this.cacheHits,
+        byEndpoint: this.callsByEndpoint
+      }
+    }));
+  },
+
+  reset() {
+    this.totalCalls = 0;
+    this.callsByEndpoint = {};
+    this.cacheHits = 0;
+    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
+      detail: {
+        total: 0,
+        cacheHits: 0,
+        byEndpoint: {}
+      }
+    }));
+  }
+};
+
+// CACHING SYSTEM
+const apiCache = {
+  memory: new Map(),
+
+  generateKey(endpoint, params) {
+    return `${endpoint}_${JSON.stringify(params)}`;
+  },
+
+  get(endpoint, params) {
+    const key = this.generateKey(endpoint, params);
+
+    // Check memory cache first
+    const memoryItem = this.memory.get(key);
+    if (memoryItem && memoryItem.expiry > Date.now()) {
+      console.log('✅ Cache HIT (memory):', key);
+      apiCallTracker.trackCacheHit();
+      return memoryItem.data;
+    }
+
+    // Check localStorage cache
+    try {
+      const lsItem = localStorage.getItem(key);
+      if (lsItem) {
+        const parsed = JSON.parse(lsItem);
+        if (parsed.expiry > Date.now()) {
+          console.log('✅ Cache HIT (localStorage):', key);
+          // Promote to memory cache
+          this.memory.set(key, parsed);
+          apiCallTracker.trackCacheHit();
+          return parsed.data;
+        } else {
+          // Expired, remove it
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn('Cache read error:', e);
+    }
+
+    console.log('❌ Cache MISS:', key);
+    return null;
+  },
+
+  set(endpoint, params, data, ttlMinutes = 30) {
+    const key = this.generateKey(endpoint, params);
+    const item = {
+      data,
+      expiry: Date.now() + (ttlMinutes * 60 * 1000)
+    };
+
+    // Store in memory
+    this.memory.set(key, item);
+
+    // Store in localStorage (with error handling for quota)
+    try {
+      localStorage.setItem(key, JSON.stringify(item));
+    } catch (e) {
+      console.warn('Cache write error (quota?):', e);
+      // If quota exceeded, clear old cache items
+      this.clearOldItems();
+    }
+  },
+
+  clearOldItems() {
+    const now = Date.now();
+    // Clear expired memory cache
+    for (const [key, value] of this.memory.entries()) {
+      if (value.expiry <= now) {
+        this.memory.delete(key);
+      }
+    }
+
+    // Clear expired localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes('_')) {
+        try {
+          const item = JSON.parse(localStorage.getItem(key));
+          if (item.expiry <= now) {
+            keysToRemove.push(key);
+          }
+        } catch (e) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  },
+
+  clear() {
+    this.memory.clear();
+    // Clear only API cache from localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('flight') || key.includes('destination') || key.includes('airport'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  }
+};
+
+// Major hub cities that should check ALL airports (not limited)
+const MAJOR_HUB_CITIES = [
+  'London', 'Paris', 'New York', 'NYC', 'Moscow', 'Los Angeles', 'LA',
+  'Tokyo', 'Manila', 'Stockholm', 'San Francisco', 'Dubai', 'Boston'
+];
+
 // AMADEUS API SERVICE
 const AmadeusAPI = {
   accessToken: null,
@@ -25,11 +179,11 @@ const AmadeusAPI = {
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
       throw new Error(data.error_description || 'Authentication failed');
     }
-    
+
     this.accessToken = data.access_token;
     this.tokenExpiry = Date.now() + (data.expires_in * 1000);
     return this.accessToken;
@@ -37,6 +191,13 @@ const AmadeusAPI = {
 
   async searchAirports(cityName) {
     try {
+      // Check cache first
+      const cacheParams = { cityName };
+      const cached = apiCache.get('airports', cacheParams);
+      if (cached) return cached;
+
+      apiCallTracker.trackCall('airports');
+
       const token = await this.getAccessToken();
       const response = await fetch(
         `https://test.api.amadeus.com/v1/reference-data/locations?subType=AIRPORT,CITY&keyword=${encodeURIComponent(cityName)}&page[limit]=5`,
@@ -53,15 +214,27 @@ const AmadeusAPI = {
       }
 
       const data = await response.json();
-      return data.data || [];
+      const result = data.data || [];
+
+      // Cache for 60 minutes (airports don't change often)
+      apiCache.set('airports', cacheParams, result, 60);
+
+      return result;
     } catch (err) {
       console.error('Airport search error:', err);
       return [];
     }
   },
 
-  async searchFlights(origin, destination, departureDate, adults = 1, returnDate = null) {
+  async searchFlights(origin, destination, departureDate, adults = 1, returnDate = null, filters = {}) {
     try {
+      // Check cache first
+      const cacheParams = { origin, destination, departureDate, adults, returnDate, filters };
+      const cached = apiCache.get('flights', cacheParams);
+      if (cached) return cached;
+
+      apiCallTracker.trackCall('flights');
+
       const token = await this.getAccessToken();
       let url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`;
 
@@ -70,7 +243,21 @@ const AmadeusAPI = {
         url += `&returnDate=${returnDate}`;
       }
 
-      console.log('🔍 Searching flights:', { origin, destination, departureDate, returnDate, tripType: returnDate ? 'round-trip' : 'one-way', url });
+      // Add filter parameters
+      if (filters.nonStop) {
+        url += '&nonStop=true';
+      }
+
+      if (filters.maxStops !== undefined && filters.maxStops !== null) {
+        // maxStops filter: 0 = direct only, 1 = max 1 stop, 2 = max 2 stops
+        if (filters.maxStops === 0) {
+          url += '&nonStop=true';
+        }
+        // Note: Amadeus API doesn't have a native maxStops parameter,
+        // so we'll filter results after fetching for maxStops > 0
+      }
+
+      console.log('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way', url });
 
       const response = await fetch(url, {
         headers: {
@@ -97,7 +284,24 @@ const AmadeusAPI = {
         return [];
       }
 
-      return data.data || [];
+      let results = data.data || [];
+
+      // Apply client-side filtering for maxStops (when not using nonStop)
+      if (filters.maxStops !== undefined && filters.maxStops !== null && filters.maxStops > 0) {
+        results = results.filter(flight => {
+          // Check all itineraries (outbound and return)
+          return flight.itineraries.every(itinerary => {
+            const stops = itinerary.segments.length - 1; // Number of segments - 1 = stops
+            return stops <= filters.maxStops;
+          });
+        });
+        console.log(`   Filtered to ${results.length} flights with max ${filters.maxStops} stops`);
+      }
+
+      // Cache for 30 minutes
+      apiCache.set('flights', cacheParams, results, 30);
+
+      return results;
     } catch (err) {
       console.error('❌ Flight search error:', err);
       return [];
@@ -106,6 +310,13 @@ const AmadeusAPI = {
 
   async searchDestinations(origin) {
     try {
+      // Check cache first
+      const cacheParams = { origin };
+      const cached = apiCache.get('destinations', cacheParams);
+      if (cached) return cached;
+
+      apiCallTracker.trackCall('destinations');
+
       const token = await this.getAccessToken();
       const url = `https://test.api.amadeus.com/v1/shopping/flight-destinations?origin=${origin}&max=50`;
       console.log('🌍 Searching destinations from:', origin);
@@ -129,7 +340,12 @@ const AmadeusAPI = {
         return [];
       }
 
-      return data.data || [];
+      const result = data.data || [];
+
+      // Cache for 60 minutes (destinations don't change often)
+      apiCache.set('destinations', cacheParams, result, 60);
+
+      return result;
     } catch (err) {
       console.error('❌ Destination search error:', err);
       return [];
@@ -536,7 +752,7 @@ const getDestinationTypes = (cityName) => {
 
 export default function HolidayPlanner() {
   const [step, setStep] = useState(1);
-  const [travelers, setTravelers] = useState([{ id: 1, name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '' }]);
+  const [travelers, setTravelers] = useState([{ id: 1, name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }]);
   const [tripType, setTripType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -563,8 +779,24 @@ export default function HolidayPlanner() {
   const [debugInfo, setDebugInfo] = useState(null);
   const [airportSearchLog, setAirportSearchLog] = useState([]);
 
+  // New filter states
+  const [directFlightsOnly, setDirectFlightsOnly] = useState(false);
+  const [maxStops, setMaxStops] = useState(null); // null = any, 0 = direct, 1 = max 1 stop, 2 = max 2 stops
+  const [checkAllAirports, setCheckAllAirports] = useState(false); // Toggle for smart airport limiting
+  const [apiCallStats, setApiCallStats] = useState({ total: 0, cacheHits: 0, byEndpoint: {} });
+
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
+
+  // Listen for API call updates
+  React.useEffect(() => {
+    const handleApiCallUpdate = (event) => {
+      setApiCallStats(event.detail);
+    };
+
+    window.addEventListener('apiCallUpdate', handleApiCallUpdate);
+    return () => window.removeEventListener('apiCallUpdate', handleApiCallUpdate);
+  }, []);
 
   // Calculate weighted score (lower is better)
   const calculateWeightedScore = (price, distanceMiles) => {
@@ -649,7 +881,7 @@ export default function HolidayPlanner() {
   };
 
   const addTraveler = () => {
-    setTravelers([...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '' }]);
+    setTravelers([...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }]);
   };
 
   const removeTraveler = (id) => {
@@ -667,20 +899,73 @@ export default function HolidayPlanner() {
     }
   };
 
+  // Smart airport limiting: decide which airports to check for a traveler
+  const getAirportsToCheck = (traveler) => {
+    let airportsToCheck = traveler.airports || [];
+
+    // Filter out excluded airports
+    if (traveler.excludedAirports && traveler.excludedAirports.length > 0) {
+      airportsToCheck = airportsToCheck.filter(
+        airport => !traveler.excludedAirports.includes(airport.code)
+      );
+    }
+
+    // If checkAllAirports is enabled, return all non-excluded airports
+    if (checkAllAirports) {
+      return airportsToCheck;
+    }
+
+    // Check if this is a major hub city (check all airports for these)
+    const isMajorHub = MAJOR_HUB_CITIES.some(
+      hubCity => traveler.origin && traveler.origin.toLowerCase().includes(hubCity.toLowerCase())
+    );
+
+    if (isMajorHub) {
+      console.log(`    🏙️ ${traveler.origin} is a major hub - checking all ${airportsToCheck.length} airports`);
+      return airportsToCheck;
+    }
+
+    // For non-hub cities, limit to 2-3 closest airports
+    const limitedAirports = airportsToCheck
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 3);
+
+    if (limitedAirports.length < airportsToCheck.length) {
+      console.log(`    ✂️ Smart limiting: ${traveler.origin} - checking ${limitedAirports.length}/${airportsToCheck.length} airports`);
+    }
+
+    return limitedAirports;
+  };
+
+  // Get current flight filters
+  const getFlightFilters = () => {
+    const filters = {};
+
+    if (directFlightsOnly) {
+      filters.nonStop = true;
+    } else if (maxStops !== null && maxStops !== undefined) {
+      filters.maxStops = maxStops;
+    }
+
+    return filters;
+  };
+
   // Calculate price metrics for a destination across all travelers
   const calculateDestinationPrices = async (destinationCode) => {
     try {
       console.log(`  💵 Calculating prices for ${destinationCode}...`);
       const pricePromises = travelers.map(async (traveler) => {
-        const airportsToCheck = traveler.airports || [];
+        const airportsToCheck = getAirportsToCheck(traveler);
         if (airportsToCheck.length === 0) {
-          console.log(`    ⚠️ ${traveler.name || traveler.origin}: No airports`);
+          console.log(`    ⚠️ ${traveler.name || traveler.origin}: No airports available`);
           return null;
         }
 
-        // Search from all nearby airports for this traveler
+        const filters = getFlightFilters();
+
+        // Search from selected airports for this traveler
         const flightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo);
+          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
           console.log(`    ${airport.code} -> ${destinationCode}: ${flights.length} flights`);
           if (flights.length === 0) return null;
 
@@ -849,19 +1134,21 @@ export default function HolidayPlanner() {
 
       console.log('🎯 Destination airport code:', destinationCode);
 
-      // Search flights for each traveler from ALL their nearby airports
+      const filters = getFlightFilters();
+
+      // Search flights for each traveler from selected nearby airports
       const flightPromises = travelers.map(async (traveler) => {
-        const airportsToCheck = traveler.airports || [];
+        const airportsToCheck = getAirportsToCheck(traveler);
         console.log(`👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`, airportsToCheck);
 
         if (airportsToCheck.length === 0) {
-          console.warn(`⚠️ No airports found for ${traveler.name || traveler.origin}`);
+          console.warn(`⚠️ No airports available for ${traveler.name || traveler.origin}`);
           return null;
         }
 
-        // Search from ALL nearby airports
+        // Search from selected airports
         const allFlightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo);
+          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
           console.log(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
 
           // Add airport info and weighted score to each flight
@@ -1131,6 +1418,84 @@ export default function HolidayPlanner() {
                 </div>
               </div>
 
+              {/* Flight Filters Section */}
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-purple-600" />
+                  Flight Filters
+                </h2>
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-2xl border-2 border-blue-200 space-y-3">
+                  {/* Direct Flights */}
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={directFlightsOnly}
+                      onChange={(e) => {
+                        setDirectFlightsOnly(e.target.checked);
+                        if (e.target.checked) setMaxStops(null);
+                      }}
+                      className="w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
+                        Direct flights only
+                      </span>
+                      <p className="text-xs text-gray-500">No layovers or connections</p>
+                    </div>
+                  </label>
+
+                  {/* Max Stops */}
+                  {!directFlightsOnly && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Maximum Stops</label>
+                      <select
+                        value={maxStops === null ? 'any' : maxStops}
+                        onChange={(e) => setMaxStops(e.target.value === 'any' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all bg-white"
+                      >
+                        <option value="any">Any number of stops</option>
+                        <option value="0">Direct only</option>
+                        <option value="1">Max 1 stop</option>
+                        <option value="2">Max 2 stops</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Check All Airports */}
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={checkAllAirports}
+                      onChange={(e) => setCheckAllAirports(e.target.checked)}
+                      className="w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
+                        Check all nearby airports
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        {checkAllAirports
+                          ? 'Checking all airports (more API calls, better prices)'
+                          : 'Smart limiting: checks 2-3 closest airports (fewer API calls)'}
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* API Call Counter */}
+                  <div className="mt-4 pt-3 border-t border-blue-200/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600 font-medium">API Calls:</span>
+                      <div className="flex gap-3">
+                        <span className="text-blue-600 font-bold">{apiCallStats.total} total</span>
+                        {apiCallStats.cacheHits > 0 && (
+                          <span className="text-green-600 font-bold">✓ {apiCallStats.cacheHits} cached</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Your Squad Section */}
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -1198,23 +1563,38 @@ export default function HolidayPlanner() {
                             </div>
                           )}
 
-                          {/* Found Airports */}
+                          {/* Found Airports with Exclusion Options */}
                           {t.airports && t.airports.length > 0 && (
                             <div className="bg-white border-2 border-green-300 rounded-xl p-2">
-                              <p className="text-xs font-bold text-green-700 mb-1 flex items-center gap-1">
+                              <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1">
                                 <MapPin className="w-3 h-3" />
-                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found!
+                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found - Select which to check:
                               </p>
-                              <div className="text-xs text-gray-700 space-y-1">
-                                {t.airports.slice(0, 3).map((a) => (
-                                  <div key={a.code} className="flex justify-between">
-                                    <span>{a.name}</span>
-                                    <span className="text-gray-500">{a.distance}mi</span>
-                                  </div>
-                                ))}
-                                {t.airports.length > 3 && (
-                                  <p className="text-gray-500 italic">+{t.airports.length - 3} more airports</p>
-                                )}
+                              <div className="text-xs text-gray-700 space-y-1.5">
+                                {t.airports.map((a) => {
+                                  const isExcluded = t.excludedAirports && t.excludedAirports.includes(a.code);
+                                  return (
+                                    <label key={a.code} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                      <input
+                                        type="checkbox"
+                                        checked={!isExcluded}
+                                        onChange={(e) => {
+                                          const excluded = t.excludedAirports || [];
+                                          if (e.target.checked) {
+                                            // Remove from excluded list
+                                            updateTraveler(t.id, 'excludedAirports', excluded.filter(code => code !== a.code));
+                                          } else {
+                                            // Add to excluded list
+                                            updateTraveler(t.id, 'excludedAirports', [...excluded, a.code]);
+                                          }
+                                        }}
+                                        className="w-3.5 h-3.5 text-green-600 rounded border-gray-300"
+                                      />
+                                      <span className="flex-1">{a.name} ({a.code})</span>
+                                      <span className="text-gray-500">{a.distance}mi</span>
+                                    </label>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
