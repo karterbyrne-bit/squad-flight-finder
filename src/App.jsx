@@ -1779,7 +1779,20 @@ export default function HolidayPlanner() {
                           const price = parseFloat(flight.price.total);
                           const outboundItinerary = flight.itineraries[0];
                           const returnItinerary = flight.itineraries[1]; // Will be undefined for one-way
-                          const outboundSegment = outboundItinerary.segments[0];
+
+                          // Debug logging
+                          console.log(`📋 ${t.name || t.origin} flight details:`, {
+                            totalItineraries: flight.itineraries.length,
+                            hasReturn: !!returnItinerary,
+                            price,
+                            outboundSegments: outboundItinerary.segments.length,
+                            returnSegments: returnItinerary?.segments?.length || 0
+                          });
+
+                          // Get first and last segments for proper origin/destination display
+                          const outboundFirstSegment = outboundItinerary.segments[0];
+                          const outboundLastSegment = outboundItinerary.segments[outboundItinerary.segments.length - 1];
+
                           const airport = flight.departureAirport;
                           const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
                           const colors = getTravelerColor(originalIndex);
@@ -1808,12 +1821,12 @@ export default function HolidayPlanner() {
                                   <div className="flex items-center gap-2 mb-2">
                                     <div className="flex items-center gap-2 flex-1">
                                       <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{airport.code}</p>
+                                        <p className="text-lg font-bold text-gray-800">{outboundFirstSegment.departure.iataCode}</p>
                                         <p className="text-xs text-gray-500">{airport.name}</p>
                                       </div>
                                       <ArrowRight className="w-5 h-5 text-purple-600" />
                                       <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{outboundSegment.arrival.iataCode}</p>
+                                        <p className="text-lg font-bold text-gray-800">{outboundLastSegment.arrival.iataCode}</p>
                                         <p className="text-xs text-gray-500">{destination}</p>
                                       </div>
                                     </div>
@@ -1822,51 +1835,57 @@ export default function HolidayPlanner() {
                                     <div className="bg-white p-2 rounded-lg">
                                       <p className="text-xs text-gray-500">Flight</p>
                                       <p className="text-sm font-bold text-gray-800">
-                                        {outboundSegment.carrierCode} {outboundSegment.number}
+                                        {outboundFirstSegment.carrierCode} {outboundFirstSegment.number}
+                                        {outboundItinerary.segments.length > 1 && ` +${outboundItinerary.segments.length - 1}`}
                                       </p>
                                     </div>
                                     <div className="bg-white p-2 rounded-lg">
                                       <p className="text-xs text-gray-500">Duration</p>
                                       <p className="text-sm font-bold text-gray-800">
-                                        {outboundSegment.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
+                                        {outboundItinerary.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
                                       </p>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Return Flight (if exists) */}
-                                {returnItinerary && (
-                                  <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
-                                    <p className="text-xs text-purple-700 font-semibold mb-2">← Return</p>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="flex items-center gap-2 flex-1">
-                                        <div className="text-center">
-                                          <p className="text-lg font-bold text-gray-800">{returnItinerary.segments[0].departure.iataCode}</p>
-                                          <p className="text-xs text-gray-500">{destination}</p>
+                                {returnItinerary && (() => {
+                                  const returnFirstSegment = returnItinerary.segments[0];
+                                  const returnLastSegment = returnItinerary.segments[returnItinerary.segments.length - 1];
+                                  return (
+                                    <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+                                      <p className="text-xs text-purple-700 font-semibold mb-2">← Return</p>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex items-center gap-2 flex-1">
+                                          <div className="text-center">
+                                            <p className="text-lg font-bold text-gray-800">{returnFirstSegment.departure.iataCode}</p>
+                                            <p className="text-xs text-gray-500">{destination}</p>
+                                          </div>
+                                          <ArrowRight className="w-5 h-5 text-purple-600" />
+                                          <div className="text-center">
+                                            <p className="text-lg font-bold text-gray-800">{returnLastSegment.arrival.iataCode}</p>
+                                            <p className="text-xs text-gray-500">{airport.name}</p>
+                                          </div>
                                         </div>
-                                        <ArrowRight className="w-5 h-5 text-purple-600" />
-                                        <div className="text-center">
-                                          <p className="text-lg font-bold text-gray-800">{returnItinerary.segments[0].arrival.iataCode}</p>
-                                          <p className="text-xs text-gray-500">{airport.name}</p>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-white p-2 rounded-lg">
+                                          <p className="text-xs text-gray-500">Flight</p>
+                                          <p className="text-sm font-bold text-gray-800">
+                                            {returnFirstSegment.carrierCode} {returnFirstSegment.number}
+                                            {returnItinerary.segments.length > 1 && ` +${returnItinerary.segments.length - 1}`}
+                                          </p>
+                                        </div>
+                                        <div className="bg-white p-2 rounded-lg">
+                                          <p className="text-xs text-gray-500">Duration</p>
+                                          <p className="text-sm font-bold text-gray-800">
+                                            {returnItinerary.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
+                                          </p>
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="bg-white p-2 rounded-lg">
-                                        <p className="text-xs text-gray-500">Flight</p>
-                                        <p className="text-sm font-bold text-gray-800">
-                                          {returnItinerary.segments[0].carrierCode} {returnItinerary.segments[0].number}
-                                        </p>
-                                      </div>
-                                      <div className="bg-white p-2 rounded-lg">
-                                        <p className="text-xs text-gray-500">Duration</p>
-                                        <p className="text-sm font-bold text-gray-800">
-                                          {returnItinerary.segments[0].duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+                                  );
+                                })()}
 
                                 <div className="bg-green-50 border border-green-200 p-3 rounded-xl">
                                   <p className="text-xs text-green-700 font-semibold flex items-center gap-1">
