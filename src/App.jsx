@@ -785,6 +785,10 @@ export default function HolidayPlanner() {
   const [checkAllAirports, setCheckAllAirports] = useState(false); // Toggle for smart airport limiting
   const [apiCallStats, setApiCallStats] = useState({ total: 0, cacheHits: 0, byEndpoint: {} });
 
+  // Debug mode state - hidden by default, toggle with Ctrl+Shift+D
+  const [debugMode, setDebugMode] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(null); // Store traveler id to confirm removal
+
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
 
@@ -796,6 +800,23 @@ export default function HolidayPlanner() {
 
     window.addEventListener('apiCallUpdate', handleApiCallUpdate);
     return () => window.removeEventListener('apiCallUpdate', handleApiCallUpdate);
+  }, []);
+
+  // Debug mode keyboard shortcut (Ctrl+Shift+D)
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setDebugMode(prev => {
+          const newMode = !prev;
+          console.log(`🔧 Debug mode ${newMode ? 'ENABLED' : 'DISABLED'}`);
+          return newMode;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Calculate weighted score (lower is better)
@@ -884,8 +905,25 @@ export default function HolidayPlanner() {
     setTravelers([...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }]);
   };
 
+  const duplicateTraveler = (travelerToDuplicate) => {
+    // Create a copy of the traveler with a new ID but same details
+    const newTraveler = {
+      ...travelerToDuplicate,
+      id: Date.now(),
+      name: travelerToDuplicate.name ? `${travelerToDuplicate.name} (copy)` : ''
+    };
+    setTravelers([...travelers, newTraveler]);
+  };
+
   const removeTraveler = (id) => {
-    if (travelers.length > 1) setTravelers(travelers.filter(t => t.id !== id));
+    if (travelers.length > 1) {
+      setShowRemoveConfirm(id);
+    }
+  };
+
+  const confirmRemoveTraveler = (id) => {
+    setTravelers(travelers.filter(t => t.id !== id));
+    setShowRemoveConfirm(null);
   };
 
   const updateTraveler = (id, field, value) => {
@@ -1223,12 +1261,14 @@ export default function HolidayPlanner() {
       setFlightData(flightMap);
       setShowResults(true);
 
-      if (!surveyShown && foundFlights > 0) {
-        setTimeout(() => {
-          setShowSurveyModal(true);
-          setSurveyShown(true);
-        }, 5000);
-      }
+      // UX Improvement: Removed auto-opening survey modal - it was intrusive
+      // Survey is still available, but user must click "Share Booking Links" to access it
+      // if (!surveyShown && foundFlights > 0) {
+      //   setTimeout(() => {
+      //     setShowSurveyModal(true);
+      //     setSurveyShown(true);
+      //   }, 5000);
+      // }
     } catch (err) {
       setError(err.message);
       console.error('❌ Flight search failed:', err);
@@ -1340,6 +1380,11 @@ export default function HolidayPlanner() {
             <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Squad Flight Finder</h1>
           </div>
           <p className="text-white/90 text-xs sm:text-sm">Find the fairest meeting spot</p>
+          {debugMode && (
+            <div className="mt-3 inline-block bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">
+              🔧 Debug Mode Active (Ctrl+Shift+D to toggle)
+            </div>
+          )}
         </div>
 
         {error && (
@@ -1351,13 +1396,22 @@ export default function HolidayPlanner() {
 
         {step === 1 && (
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Step Indicator */}
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3">
+              <p className="text-white text-sm font-semibold text-center">
+                Step 1 of 2: Plan Your Trip
+              </p>
+            </div>
             <div className="p-4 sm:p-5 space-y-6">
               {/* Budget Section */}
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-purple-600" />
                   Budget per Person
                 </h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  This is a guide for destination filtering. Flight prices within your budget will be prioritized.
+                </p>
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-2xl border-2 border-purple-200">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-2xl font-bold text-purple-600">£{maxBudget}</span>
@@ -1481,18 +1535,20 @@ export default function HolidayPlanner() {
                     </div>
                   </label>
 
-                  {/* API Call Counter */}
-                  <div className="mt-4 pt-3 border-t border-blue-200/50">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600 font-medium">API Calls:</span>
-                      <div className="flex gap-3">
-                        <span className="text-blue-600 font-bold">{apiCallStats.total} total</span>
-                        {apiCallStats.cacheHits > 0 && (
-                          <span className="text-green-600 font-bold">✓ {apiCallStats.cacheHits} cached</span>
-                        )}
+                  {/* API Call Counter - Debug Mode Only */}
+                  {debugMode && (
+                    <div className="mt-4 pt-3 border-t border-blue-200/50">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600 font-medium">API Calls:</span>
+                        <div className="flex gap-3">
+                          <span className="text-blue-600 font-bold">{apiCallStats.total} total</span>
+                          {apiCallStats.cacheHits > 0 && (
+                            <span className="text-green-600 font-bold">✓ {apiCallStats.cacheHits} cached</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1526,16 +1582,27 @@ export default function HolidayPlanner() {
                         {/* Card Header */}
                         <div className="flex items-center justify-between mb-3">
                           <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-xs`}>
-                            Person {i + 1}
+                            {t.name || `Person ${i + 1}`}
                           </div>
-                          {travelers.length > 1 && (
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => removeTraveler(t.id)}
-                              className="p-1 text-red-500 hover:bg-red-100 rounded-full transition-all"
+                              onClick={() => duplicateTraveler(t)}
+                              className="px-2 py-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-all font-semibold flex items-center gap-1"
+                              title="Duplicate this traveler"
                             >
-                              <X className="w-4 h-4" />
+                              <Copy className="w-3 h-3" />
+                              Duplicate
                             </button>
-                          )}
+                            {travelers.length > 1 && (
+                              <button
+                                onClick={() => removeTraveler(t.id)}
+                                className="p-1 text-red-500 hover:bg-red-100 rounded-full transition-all"
+                                title="Remove this traveler"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Input Fields */}
@@ -1547,13 +1614,20 @@ export default function HolidayPlanner() {
                             onChange={(e) => updateTraveler(t.id, 'name', e.target.value)}
                             className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                           />
-                          <input
-                            type="text"
-                            placeholder="From which city?"
-                            value={t.origin}
-                            onChange={(e) => handleOriginChange(t.id, e.target.value)}
-                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
-                          />
+                          <div>
+                            <input
+                              type="text"
+                              placeholder="City name (e.g., London, Paris, New York)"
+                              value={t.origin}
+                              onChange={(e) => handleOriginChange(t.id, e.target.value)}
+                              className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
+                            />
+                            {!t.origin && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                We'll automatically find nearby airports
+                              </p>
+                            )}
+                          </div>
 
                           {/* Airport Search Status */}
                           {searchingAirports[t.id] && (
@@ -1563,12 +1637,12 @@ export default function HolidayPlanner() {
                             </div>
                           )}
 
-                          {/* Found Airports with Exclusion Options */}
+                          {/* Found Airports with Include Options */}
                           {t.airports && t.airports.length > 0 && (
                             <div className="bg-white border-2 border-green-300 rounded-xl p-2">
                               <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1">
                                 <MapPin className="w-3 h-3" />
-                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found - Select which to check:
+                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found - Check to include:
                               </p>
                               <div className="text-xs text-gray-700 space-y-1.5">
                                 {t.airports.map((a) => {
@@ -1599,15 +1673,20 @@ export default function HolidayPlanner() {
                             </div>
                           )}
 
-                          <select
-                            value={t.luggage}
-                            onChange={(e) => updateTraveler(t.id, 'luggage', e.target.value)}
-                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all bg-white"
-                          >
-                            <option value="hand">Hand bag only</option>
-                            <option value="cabin">Cabin bag (10kg)</option>
-                            <option value="checked">Checked baggage</option>
-                          </select>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Luggage <span className="text-gray-500 font-normal">(affects price)</span>
+                            </label>
+                            <select
+                              value={t.luggage}
+                              onChange={(e) => updateTraveler(t.id, 'luggage', e.target.value)}
+                              className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all bg-white"
+                            >
+                              <option value="hand">Hand bag only (cheapest)</option>
+                              <option value="cabin">Cabin bag 10kg</option>
+                              <option value="checked">Checked baggage</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1703,8 +1782,8 @@ export default function HolidayPlanner() {
                 </div>
               </div>
 
-              {/* Airport Search Debug Panel */}
-              {airportSearchLog.length > 0 && (
+              {/* Airport Search Debug Panel - Debug Mode Only */}
+              {debugMode && airportSearchLog.length > 0 && (
                 <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4">
                   <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2 text-sm">
                     <Info className="w-4 h-4" />
@@ -1748,6 +1827,13 @@ export default function HolidayPlanner() {
 
         {step === 2 && (
           <>
+            {/* Step Indicator */}
+            <div className="bg-white rounded-2xl shadow-lg p-3 mb-4">
+              <p className="text-gray-700 text-sm font-semibold text-center">
+                Step 2 of 2: Choose Your Destination
+              </p>
+            </div>
+
             <button
               onClick={() => {
                 setStep(1);
@@ -1755,9 +1841,9 @@ export default function HolidayPlanner() {
                 setFlightData({});
                 setSurveyShown(false); // Reset survey state when going back
               }}
-              className="mb-6 px-5 py-3 text-white bg-white/20 backdrop-blur-sm rounded-xl text-sm font-semibold hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg"
+              className="mb-6 w-full sm:w-auto px-6 py-4 text-white bg-white/20 backdrop-blur-sm rounded-xl text-base font-semibold hover:bg-white/30 transition-all flex items-center justify-center gap-2 shadow-lg"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               Back to Setup
             </button>
 
@@ -1804,9 +1890,13 @@ export default function HolidayPlanner() {
                         Sort by:
                       </label>
                     </div>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Choose how to rank destinations: average cost across all travelers, fairness (smallest price difference), or cheapest individual ticket
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => setSortBy('avgPrice')}
+                        title="Average price across all travelers"
                         className={`p-3 rounded-xl border-2 transition-all ${
                           sortBy === 'avgPrice'
                             ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
@@ -1820,6 +1910,7 @@ export default function HolidayPlanner() {
                       </button>
                       <button
                         onClick={() => setSortBy('deviation')}
+                        title="Most balanced costs - everyone pays similar amounts"
                         className={`p-3 rounded-xl border-2 transition-all ${
                           sortBy === 'deviation'
                             ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
@@ -1833,6 +1924,7 @@ export default function HolidayPlanner() {
                       </button>
                       <button
                         onClick={() => setSortBy('minPrice')}
+                        title="Lowest individual ticket price"
                         className={`p-3 rounded-xl border-2 transition-all ${
                           sortBy === 'minPrice'
                             ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md'
@@ -2013,8 +2105,8 @@ export default function HolidayPlanner() {
 
             {showResults && (
               <>
-                {/* Debug Panel */}
-                {debugInfo && (
+                {/* Debug Panel - Debug Mode Only */}
+                {debugMode && debugInfo && (
                   <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4 mb-6">
                     <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
                       <Info className="w-5 h-5" />
@@ -2319,6 +2411,32 @@ export default function HolidayPlanner() {
               </>
             )}
           </>
+        )}
+
+        {/* Confirmation Dialog for Removing Traveler */}
+        {showRemoveConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Remove Traveler?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to remove this traveler? All their travel information will be lost.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRemoveConfirm(null)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => confirmRemoveTraveler(showRemoveConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {showShareModal && (
