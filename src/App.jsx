@@ -645,7 +645,7 @@ export default function HolidayPlanner() {
   };
 
   const updateTraveler = (id, field, value) => {
-    setTravelers(travelers.map(t => t.id === id ? { ...t, [field]: value } : t));
+    setTravelers(prevTravelers => prevTravelers.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
   const handleOriginChange = (id, value) => {
