@@ -219,6 +219,7 @@ const cityToAirportsMap = {
 
 // Destination airport codes (primary airport per city)
 const destinationAirportMap = {
+  // Major Cities - Western Europe
   'Barcelona': 'BCN',
   'Amsterdam': 'AMS',
   'Prague': 'PRG',
@@ -237,38 +238,136 @@ const destinationAirportMap = {
   'Oslo': 'OSL',
   'Helsinki': 'HEL',
   'Reykjavik': 'KEF',
+
+  // Spanish Cities & Beach Destinations
+  'Palma': 'PMI',
+  'Mallorca': 'PMI',
+  'Ibiza': 'IBZ',
+  'Menorca': 'MAH',
+  'Alicante': 'ALC',
+  'Benidorm': 'ALC',
+  'Malaga': 'AGP',
+  'Tenerife': 'TFS',
+  'Gran Canaria': 'LPA',
+  'Lanzarote': 'ACE',
+  'Fuerteventura': 'FUE',
+  'Seville': 'SVQ',
+  'Valencia': 'VLC',
+  'Bilbao': 'BIO',
+  'Granada': 'GRX',
+  'Santiago de Compostela': 'SCQ',
+
+  // Portuguese Destinations
+  'Porto': 'OPO',
+  'Faro': 'FAO',
+  'Algarve': 'FAO',
+
+  // Greek Destinations
   'Athens': 'ATH',
+  'Santorini': 'JTR',
+  'Mykonos': 'JMK',
+  'Rhodes': 'RHO',
+  'Corfu': 'CFU',
+  'Heraklion': 'HER',
+  'Crete': 'HER',
+  'Chania': 'CHQ',
+  'Kos': 'KGS',
+  'Zakynthos': 'ZTH',
+  'Thessaloniki': 'SKG',
+
+  // Italian Cities & Islands
   'Venice': 'VCE',
   'Milan': 'MXP',
   'Florence': 'FLR',
   'Naples': 'NAP',
+  'Bologna': 'BLQ',
+  'Turin': 'TRN',
+  'Verona': 'VRN',
+  'Genoa': 'GOA',
+  'Pisa': 'PSA',
+  'Bergamo': 'BGY',
+  'Catania': 'CTA',
+  'Palermo': 'PMO',
+  'Cagliari': 'CAG',
+  'Olbia': 'OLB',
+  'Bari': 'BRI',
+  'Brindisi': 'BDS',
+
+  // French Cities
   'Nice': 'NCE',
   'Lyon': 'LYS',
   'Marseille': 'MRS',
-  'Porto': 'OPO',
-  'Warsaw': 'WAW',
-  'Krakow': 'KRK',
+  'Bordeaux': 'BOD',
+  'Toulouse': 'TLS',
+  'Strasbourg': 'SXB',
+  'Nantes': 'NTE',
+  'Montpellier': 'MPL',
+
+  // German Cities
   'Munich': 'MUC',
   'Hamburg': 'HAM',
   'Frankfurt': 'FRA',
-  'Zurich': 'ZRH',
-  'Geneva': 'GVA',
+  'Cologne': 'CGN',
+  'Dusseldorf': 'DUS',
+  'Stuttgart': 'STR',
+  'Dresden': 'DRS',
+  'Nuremberg': 'NUE',
+  'Bremen': 'BRE',
+  'Hannover': 'HAJ',
+  'Leipzig': 'LEJ',
+
+  // Eastern European Cities (Budget)
+  'Warsaw': 'WAW',
+  'Krakow': 'KRK',
+  'Gdansk': 'GDN',
+  'Wroclaw': 'WRO',
+  'Poznan': 'POZ',
   'Zagreb': 'ZAG',
   'Belgrade': 'BEG',
   'Bucharest': 'OTP',
   'Sofia': 'SOF',
-  'Dubrovnik': 'DBV',
-  'Split': 'SPU',
   'Riga': 'RIX',
   'Tallinn': 'TLL',
   'Vilnius': 'VNO',
+  'Bratislava': 'BTS',
+  'Ljubljana': 'LJU',
+  'Sarajevo': 'SJJ',
+  'Skopje': 'SKP',
+  'Tirana': 'TIA',
+
+  // Croatian Coast
+  'Dubrovnik': 'DBV',
+  'Split': 'SPU',
+  'Zadar': 'ZAD',
+  'Pula': 'PUY',
+
+  // Ski Destinations
+  'Zurich': 'ZRH',
+  'Geneva': 'GVA',
+  'Innsbruck': 'INN',
+  'Salzburg': 'SZG',
+  'Grenoble': 'GNB',
+  'Chambery': 'CMF',
+
+  // Scandinavia
+  'Bergen': 'BGO',
+  'Tromso': 'TOS',
+  'Gothenburg': 'GOT',
+  'Aarhus': 'AAR',
+  'Turku': 'TKU',
+
+  // Other
   'Luxembourg': 'LUX',
-  'Malta': 'MLA'
+  'Malta': 'MLA',
+  'Eindhoven': 'EIN',
+  'Rotterdam': 'RTM',
+  'Antalya': 'AYT',
+  'Bodrum': 'BJV'
 };
 
 // Destination types mapping - categorize destinations by trip type
 const destinationTypes = {
-  // City breaks
+  // Major Western European Cities
   'Barcelona': ['city', 'beach'],
   'Amsterdam': ['city'],
   'Prague': ['city', 'cheap'],
@@ -286,18 +385,94 @@ const destinationTypes = {
   'Stockholm': ['city'],
   'Oslo': ['city'],
   'Helsinki': ['city'],
+
+  // Spanish Beach Destinations (very popular from UK)
+  'Palma': ['beach', 'cheap'],
+  'Mallorca': ['beach', 'cheap'],
+  'Ibiza': ['beach', 'luxury'],
+  'Menorca': ['beach', 'cheap'],
+  'Alicante': ['beach', 'cheap'],
+  'Benidorm': ['beach', 'cheap'],
+  'Malaga': ['beach', 'cheap'],
+  'Tenerife': ['beach', 'cheap'],
+  'Gran Canaria': ['beach', 'cheap'],
+  'Lanzarote': ['beach', 'cheap'],
+  'Fuerteventura': ['beach', 'cheap'],
+
+  // Spanish Cities
+  'Seville': ['city', 'cheap'],
+  'Valencia': ['city', 'beach', 'cheap'],
+  'Bilbao': ['city'],
+  'Granada': ['city', 'cheap'],
+  'Santiago de Compostela': ['city'],
+
+  // Portuguese Destinations
+  'Porto': ['city', 'cheap'],
+  'Faro': ['beach', 'cheap'],
+  'Algarve': ['beach', 'cheap'],
+
+  // Greek Destinations (popular & cheap)
   'Athens': ['city', 'beach', 'cheap'],
+  'Santorini': ['beach', 'luxury'],
+  'Mykonos': ['beach', 'luxury'],
+  'Rhodes': ['beach', 'cheap'],
+  'Corfu': ['beach', 'cheap'],
+  'Heraklion': ['beach', 'cheap'],
+  'Crete': ['beach', 'cheap'],
+  'Chania': ['beach', 'cheap'],
+  'Kos': ['beach', 'cheap'],
+  'Zakynthos': ['beach', 'cheap'],
+  'Thessaloniki': ['city', 'beach', 'cheap'],
+
+  // Italian Cities
   'Venice': ['city', 'luxury'],
   'Milan': ['city', 'luxury'],
   'Florence': ['city'],
-  'Porto': ['city', 'cheap'],
-  'Warsaw': ['city', 'cheap'],
-  'Krakow': ['city', 'cheap'],
+  'Naples': ['city', 'beach', 'cheap'],
+  'Bologna': ['city'],
+  'Turin': ['city', 'ski'],
+  'Verona': ['city'],
+  'Genoa': ['city'],
+  'Pisa': ['city'],
+  'Bergamo': ['city'],
+
+  // Italian Islands
+  'Catania': ['beach', 'cheap'],
+  'Palermo': ['city', 'beach', 'cheap'],
+  'Cagliari': ['beach', 'cheap'],
+  'Olbia': ['beach', 'cheap'],
+  'Bari': ['city', 'beach', 'cheap'],
+  'Brindisi': ['beach', 'cheap'],
+
+  // French Cities
+  'Nice': ['beach', 'luxury'],
+  'Lyon': ['city'],
+  'Marseille': ['city', 'beach'],
+  'Bordeaux': ['city'],
+  'Toulouse': ['city'],
+  'Strasbourg': ['city'],
+  'Nantes': ['city'],
+  'Montpellier': ['city', 'beach'],
+
+  // German Cities
   'Munich': ['city'],
   'Hamburg': ['city'],
   'Frankfurt': ['city'],
-  'Zurich': ['city', 'luxury', 'ski'],
-  'Geneva': ['city', 'luxury', 'ski'],
+  'Cologne': ['city'],
+  'Dusseldorf': ['city'],
+  'Stuttgart': ['city'],
+  'Dresden': ['city'],
+  'Nuremberg': ['city'],
+  'Bremen': ['city'],
+  'Hannover': ['city'],
+  'Leipzig': ['city'],
+
+  // Eastern European Budget Cities
+  'Warsaw': ['city', 'cheap'],
+  'Krakow': ['city', 'cheap'],
+  'Gdansk': ['city', 'cheap'],
+  'Wroclaw': ['city', 'cheap'],
+  'Poznan': ['city', 'cheap'],
   'Zagreb': ['city', 'cheap'],
   'Belgrade': ['city', 'cheap'],
   'Bucharest': ['city', 'cheap'],
@@ -305,18 +480,41 @@ const destinationTypes = {
   'Riga': ['city', 'cheap'],
   'Tallinn': ['city', 'cheap'],
   'Vilnius': ['city', 'cheap'],
-  'Luxembourg': ['city'],
+  'Bratislava': ['city', 'cheap'],
+  'Ljubljana': ['city', 'cheap'],
+  'Sarajevo': ['city', 'cheap'],
+  'Skopje': ['city', 'cheap'],
+  'Tirana': ['city', 'cheap'],
 
-  // Beach destinations
-  'Nice': ['beach', 'luxury'],
-  'Marseille': ['beach'],
-  'Naples': ['beach'],
-  'Dubrovnik': ['beach'],
-  'Split': ['beach'],
-  'Malta': ['beach', 'cheap'],
+  // Croatian Coast (beach + budget)
+  'Dubrovnik': ['beach', 'city'],
+  'Split': ['beach', 'cheap'],
+  'Zadar': ['beach', 'cheap'],
+  'Pula': ['beach', 'cheap'],
 
-  // Ski destinations
+  // Ski Destinations
+  'Zurich': ['city', 'luxury', 'ski'],
+  'Geneva': ['city', 'luxury', 'ski'],
+  'Innsbruck': ['ski', 'city'],
+  'Salzburg': ['ski', 'city'],
+  'Grenoble': ['ski'],
+  'Chambery': ['ski'],
   'Reykjavik': ['ski', 'luxury'],
+
+  // Scandinavia
+  'Bergen': ['city', 'ski'],
+  'Tromso': ['ski'],
+  'Gothenburg': ['city'],
+  'Aarhus': ['city'],
+  'Turku': ['city'],
+
+  // Other Popular Destinations
+  'Luxembourg': ['city'],
+  'Malta': ['beach', 'cheap'],
+  'Eindhoven': ['city', 'cheap'],
+  'Rotterdam': ['city'],
+  'Antalya': ['beach', 'cheap'],
+  'Bodrum': ['beach', 'cheap'],
 };
 
 // Get destination types for a city
