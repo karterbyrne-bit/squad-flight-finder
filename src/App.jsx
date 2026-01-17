@@ -548,6 +548,7 @@ export default function HolidayPlanner() {
   const [searchingAirports, setSearchingAirports] = useState({});
   const [availableDestinations, setAvailableDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
@@ -856,6 +857,26 @@ export default function HolidayPlanner() {
 
       console.log('✅ Flight search complete. Found flights for', foundFlights, 'out of', travelers.length, 'travelers');
       console.log('📦 Flight data:', flightMap);
+
+      // Collect debug information
+      const debug = {
+        timestamp: new Date().toISOString(),
+        destination: destinationCity,
+        destinationCode,
+        dateFrom,
+        totalTravelers: travelers.length,
+        foundFlights,
+        travelers: travelers.map(t => ({
+          name: t.name || t.origin,
+          origin: t.origin,
+          airportsCount: t.airports?.length || 0,
+          airports: t.airports?.map(a => a.code).join(', ') || 'None',
+          hasFlights: !!flightMap[t.id],
+          flightCount: flightMap[t.id]?.flights?.length || 0,
+          cheapestPrice: flightMap[t.id]?.cheapest?.price?.total || 'N/A'
+        }))
+      };
+      setDebugInfo(debug);
 
       if (foundFlights === 0) {
         setError('No flights found for the selected date and destination. Try a different date or destination.');
@@ -1528,6 +1549,35 @@ export default function HolidayPlanner() {
 
             {showResults && (
               <>
+                {/* Debug Panel */}
+                {debugInfo && (
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4 mb-6">
+                    <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                      <Info className="w-5 h-5" />
+                      Debug Info (Tap to help diagnose issues)
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white rounded-lg p-3">
+                        <p className="font-semibold text-gray-700">Search Details:</p>
+                        <p className="text-gray-600">Destination: {debugInfo.destination} ({debugInfo.destinationCode})</p>
+                        <p className="text-gray-600">Date: {debugInfo.dateFrom}</p>
+                        <p className="text-gray-600">Found flights for: {debugInfo.foundFlights}/{debugInfo.totalTravelers} travelers</p>
+                      </div>
+
+                      {debugInfo.travelers.map((t, i) => (
+                        <div key={i} className={`rounded-lg p-3 ${t.hasFlights ? 'bg-green-50' : 'bg-red-50'}`}>
+                          <p className="font-semibold">{t.name}</p>
+                          <p className="text-xs">Airports found: {t.airportsCount} ({t.airports})</p>
+                          <p className="text-xs">Flights found: {t.flightCount}</p>
+                          {t.hasFlights && <p className="text-xs">Cheapest: £{t.cheapestPrice}</p>}
+                          {!t.hasFlights && <p className="text-xs text-red-600">❌ No flights found</p>}
+                          {t.airportsCount === 0 && <p className="text-xs text-red-600">⚠️ No airports assigned for "{t.origin}"</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {fairness ? (
                   <>
                     {/* Share Button */}
