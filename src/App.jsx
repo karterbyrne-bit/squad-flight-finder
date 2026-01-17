@@ -549,6 +549,7 @@ export default function HolidayPlanner() {
   const [availableDestinations, setAvailableDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [airportSearchLog, setAirportSearchLog] = useState([]);
 
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
@@ -561,24 +562,40 @@ export default function HolidayPlanner() {
 
   // Debounced airport search
   const searchAirportsForCity = async (travelerId, cityName) => {
-    if (!cityName || cityName.length < 3) return;
-    
+    console.log('🔍 searchAirportsForCity called:', { travelerId, cityName });
+
+    const logEntry = { travelerId, cityName, timestamp: new Date().toISOString() };
+
+    if (!cityName || cityName.length < 3) {
+      console.log('⚠️ cityName too short or empty:', cityName);
+      logEntry.result = 'City name too short';
+      setAirportSearchLog(prev => [...prev, logEntry]);
+      return;
+    }
+
     setSearchingAirports(prev => ({ ...prev, [travelerId]: true }));
-    
+
     try {
       // Check if we have predefined airports for this city (trim spaces and lowercase)
       const cityKey = Object.keys(cityToAirportsMap).find(
         key => key.toLowerCase() === cityName.toLowerCase().trim()
       );
-      
+
+      console.log('🗺️ Looking for city:', cityName.toLowerCase().trim(), 'Found match:', cityKey);
+
       if (cityKey) {
         // Use predefined airport list with distances
         const airports = cityToAirportsMap[cityKey];
+        console.log('✅ Using predefined airports for', cityKey, ':', airports);
+        logEntry.result = `Found in predefined list: ${airports.length} airports`;
+        logEntry.airports = airports.map(a => a.code).join(', ');
         updateTraveler(travelerId, 'airports', airports);
         updateTraveler(travelerId, 'selectedAirport', airports[0].code);
       } else {
         // Fall back to API search - ONLY get AIRPORT codes, not city codes
+        console.log('🌐 Falling back to API search for:', cityName);
         const airports = await AmadeusAPI.searchAirports(cityName);
+        console.log('📡 API returned:', airports);
         const formatted = airports
           .filter(airport => airport.subType === 'AIRPORT') // Only airports!
           .slice(0, 5)
@@ -587,16 +604,25 @@ export default function HolidayPlanner() {
             name: airport.name,
             distance: 15, // Default distance if unknown
           }));
-        
+
+        console.log('✈️ Formatted airports:', formatted);
+
         if (formatted.length > 0) {
+          logEntry.result = `API search: ${formatted.length} airports`;
+          logEntry.airports = formatted.map(a => a.code).join(', ');
           updateTraveler(travelerId, 'airports', formatted);
           updateTraveler(travelerId, 'selectedAirport', formatted[0].code);
+        } else {
+          console.log('❌ No airports found after filtering');
+          logEntry.result = 'API search found 0 airports';
         }
       }
     } catch (err) {
-      console.error('Airport search failed:', err);
+      console.error('❌ Airport search failed:', err);
+      logEntry.result = `Error: ${err.message}`;
     } finally {
       setSearchingAirports(prev => ({ ...prev, [travelerId]: false }));
+      setAirportSearchLog(prev => [...prev, logEntry]);
     }
   };
 
@@ -1269,6 +1295,29 @@ export default function HolidayPlanner() {
                 </div>
               </div>
 
+              {/* Airport Search Debug Panel */}
+              {airportSearchLog.length > 0 && (
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4">
+                  <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2 text-sm">
+                    <Info className="w-4 h-4" />
+                    Airport Search Log ({airportSearchLog.length} searches)
+                  </h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {airportSearchLog.map((log, idx) => (
+                      <div key={idx} className="bg-white rounded-lg p-3 text-xs">
+                        <p className="font-semibold text-gray-800">City: "{log.cityName}"</p>
+                        <p className={`${log.airports ? 'text-green-700' : 'text-red-700'} font-medium`}>
+                          {log.result}
+                        </p>
+                        {log.airports && (
+                          <p className="text-gray-600 mt-1">Airports: {log.airports}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Find Destinations Button */}
               <div className="pt-4">
                 <button
@@ -1557,6 +1606,19 @@ export default function HolidayPlanner() {
                       Debug Info (Tap to help diagnose issues)
                     </h3>
                     <div className="space-y-2 text-sm">
+                      {airportSearchLog.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                          <p className="font-semibold text-yellow-900 mb-2">Airport Search Log ({airportSearchLog.length} searches):</p>
+                          {airportSearchLog.map((log, idx) => (
+                            <div key={idx} className="text-xs mb-2 pb-2 border-b border-yellow-200 last:border-0">
+                              <p className="font-semibold">City: "{log.cityName}"</p>
+                              <p className={log.airports ? 'text-green-700' : 'text-red-700'}>{log.result}</p>
+                              {log.airports && <p className="text-gray-600">Airports: {log.airports}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="bg-white rounded-lg p-3">
                         <p className="font-semibold text-gray-700">Search Details:</p>
                         <p className="text-gray-600">Destination: {debugInfo.destination} ({debugInfo.destinationCode})</p>
