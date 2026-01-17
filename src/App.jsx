@@ -714,7 +714,7 @@ export default function HolidayPlanner() {
   };
 
   const goToDestinations = async () => {
-    if (travelers.every(t => t.selectedAirport) && dateFrom && dateTo) {
+    if (travelers.every(t => t.selectedAirport) && dateFrom) {
       setStep(2);
 
       // Fetch available destinations from all travelers' airports
@@ -1017,7 +1017,7 @@ export default function HolidayPlanner() {
   const destination = selectedDestination || customDestination;
   const fairness = getFairnessDetails();
 
-  const canProceed = travelers.every(t => t.selectedAirport) && dateFrom && dateTo;
+  const canProceed = travelers.every(t => t.selectedAirport) && dateFrom;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-6 pb-20">
