@@ -60,11 +60,17 @@ const AmadeusAPI = {
     }
   },
 
-  async searchFlights(origin, destination, departureDate, adults = 1) {
+  async searchFlights(origin, destination, departureDate, adults = 1, returnDate = null) {
     try {
       const token = await this.getAccessToken();
-      const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`;
-      console.log('🔍 Searching flights:', { origin, destination, departureDate, url });
+      let url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`;
+
+      // Add returnDate for round-trip searches
+      if (returnDate) {
+        url += `&returnDate=${returnDate}`;
+      }
+
+      console.log('🔍 Searching flights:', { origin, destination, departureDate, returnDate, tripType: returnDate ? 'round-trip' : 'one-way', url });
 
       const response = await fetch(url, {
         headers: {
@@ -664,7 +670,7 @@ export default function HolidayPlanner() {
 
         // Search from all nearby airports for this traveler
         const flightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1);
+          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo);
           if (flights.length === 0) return null;
 
           // Get cheapest flight from this airport
@@ -839,7 +845,7 @@ export default function HolidayPlanner() {
 
         // Search from ALL nearby airports
         const allFlightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1);
+          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo);
           console.log(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
 
           // Add airport info and weighted score to each flight
@@ -1091,7 +1097,7 @@ export default function HolidayPlanner() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Return Date</label>
+                    <label className="block text-sm font-semibold text-gray-700">Return Date <span className="text-gray-400 font-normal">(optional)</span></label>
                     <input
                       type="date"
                       value={dateTo}
@@ -1099,6 +1105,9 @@ export default function HolidayPlanner() {
                       onChange={(e) => setDateTo(e.target.value)}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                     />
+                    <p className="text-xs text-gray-500">
+                      {dateTo ? '✓ Prices will show total round-trip cost' : 'Leave empty for one-way flights'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1493,6 +1502,13 @@ export default function HolidayPlanner() {
                         {/* City Name */}
                         <p className="font-bold text-sm mb-2 text-gray-800">{d.city}</p>
 
+                        {/* Trip Type Badge */}
+                        <div className="mb-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
+                            {dateTo ? '↔ Round-trip' : '→ One-way'}
+                          </span>
+                        </div>
+
                         {/* Price Metrics */}
                         <div className="space-y-1 mb-2">
                           <div className="flex items-center justify-between text-xs">
@@ -1761,7 +1777,7 @@ export default function HolidayPlanner() {
                                 </div>
                                 <div className="text-right">
                                   <p className="text-3xl font-bold text-green-600">£{Math.round(price)}</p>
-                                  <p className="text-xs text-gray-500">per person</p>
+                                  <p className="text-xs text-gray-500">{dateTo ? 'round-trip' : 'one-way'}</p>
                                 </div>
                               </div>
 
