@@ -670,13 +670,18 @@ export default function HolidayPlanner() {
   // Calculate price metrics for a destination across all travelers
   const calculateDestinationPrices = async (destinationCode) => {
     try {
+      console.log(`  💵 Calculating prices for ${destinationCode}...`);
       const pricePromises = travelers.map(async (traveler) => {
         const airportsToCheck = traveler.airports || [];
-        if (airportsToCheck.length === 0) return null;
+        if (airportsToCheck.length === 0) {
+          console.log(`    ⚠️ ${traveler.name || traveler.origin}: No airports`);
+          return null;
+        }
 
         // Search from all nearby airports for this traveler
         const flightSearches = airportsToCheck.map(async (airport) => {
           const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo);
+          console.log(`    ${airport.code} -> ${destinationCode}: ${flights.length} flights`);
           if (flights.length === 0) return null;
 
           // Get cheapest flight from this airport
@@ -694,33 +699,38 @@ export default function HolidayPlanner() {
         const results = await Promise.all(flightSearches);
         const validResults = results.filter(r => r !== null);
 
-        if (validResults.length === 0) return null;
+        if (validResults.length === 0) {
+          console.log(`    ❌ ${traveler.name || traveler.origin}: No flights found from any airport`);
+          return null;
+        }
 
         // Get best option (lowest weighted score)
-        return validResults.reduce((best, current) =>
+        const best = validResults.reduce((best, current) =>
           current.weightedScore < best.weightedScore ? current : best
         );
+        console.log(`    ✓ ${traveler.name || traveler.origin}: Best price £${best.price}`);
+        return best;
       });
 
       const prices = await Promise.all(pricePromises);
       const validPrices = prices.filter(p => p !== null).map(p => p.price);
 
-      if (validPrices.length === 0) return null;
+      if (validPrices.length === 0) {
+        console.log(`  ❌ ${destinationCode}: No valid prices found for any traveler`);
+        return null;
+      }
 
-      const avgPrice = validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length;
-      const minPrice = Math.min(...validPrices);
-      const maxPrice = Math.max(...validPrices);
-      const deviation = maxPrice - minPrice;
-
-      return {
-        avgPrice: Math.round(avgPrice),
-        minPrice: Math.round(minPrice),
-        maxPrice: Math.round(maxPrice),
-        deviation: Math.round(deviation),
-        priceCount: validPrices.length
+      const result = {
+        avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
+        minPrice: Math.round(Math.min(...validPrices)),
+        maxPrice: Math.round(Math.max(...validPrices)),
+        deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices))
       };
+
+      console.log(`  ✅ ${destinationCode}: avg £${result.avgPrice}, range £${result.minPrice}-£${result.maxPrice}`);
+      return result;
     } catch (err) {
-      console.error(`Error calculating prices for ${destinationCode}:`, err);
+      console.error(`❌ Error calculating prices for ${destinationCode}:`, err);
       return null;
     }
   };
