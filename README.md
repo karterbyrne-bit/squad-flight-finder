@@ -209,24 +209,22 @@ See our [Project Roadmap](./PROJECT_ROADMAP.md) for detailed plans to become bes
 
 ---
 
-## 🤝 Contributing
+## 💼 Commercial Project
 
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Squad Flight Finder is a **commercial product** under active development. This repository is private and proprietary.
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests (`npm test`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to your branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+### For Team Members
+See internal documentation for development workflows and contribution guidelines.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+**Proprietary and Confidential**
+
+Copyright © 2026 Squad Flight Finder. All rights reserved.
+
+This software and associated documentation files are proprietary. Unauthorized copying, distribution, modification, or use is strictly prohibited.
 
 ---
 
@@ -238,11 +236,10 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ---
 
-## 📧 Contact & Support
+## 📧 Contact
 
-- **Issues**: [GitHub Issues](https://github.com/karterbyrne-bit/squad-flight-finder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/karterbyrne-bit/squad-flight-finder/discussions)
-- **Email**: support@squadflightfinder.com *(coming soon)*
+- **Business Inquiries**: contact@squadflightfinder.com *(coming soon)*
+- **Internal Issues**: Use GitHub Issues (team access only)
 
 ---
 
