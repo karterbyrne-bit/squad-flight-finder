@@ -11,6 +11,13 @@ import {
   trackPopularDestination,
 } from './utils/analytics';
 
+// DEVELOPMENT LOGGING HELPER
+// Only logs in development mode to avoid performance impact and data leakage in production
+const isDev = import.meta.env.DEV;
+const devLog = (...args) => { if (isDev) devLog(...args); };
+const devError = (...args) => { if (isDev) devError(...args); };
+const devWarn = (...args) => { if (isDev) devWarn(...args); };
+
 // API CALL TRACKING
 const apiCallTracker = {
   totalCalls: 0,
@@ -69,7 +76,7 @@ const apiCache = {
     // Check memory cache first
     const memoryItem = this.memory.get(key);
     if (memoryItem && memoryItem.expiry > Date.now()) {
-      console.log('✅ Cache HIT (memory):', key);
+      devLog('✅ Cache HIT (memory):', key);
       apiCallTracker.trackCacheHit();
       return memoryItem.data;
     }
@@ -80,7 +87,7 @@ const apiCache = {
       if (lsItem) {
         const parsed = JSON.parse(lsItem);
         if (parsed.expiry > Date.now()) {
-          console.log('✅ Cache HIT (localStorage):', key);
+          devLog('✅ Cache HIT (localStorage):', key);
           // Promote to memory cache
           this.memory.set(key, parsed);
           apiCallTracker.trackCacheHit();
@@ -91,10 +98,10 @@ const apiCache = {
         }
       }
     } catch (e) {
-      console.warn('Cache read error:', e);
+      devWarn('Cache read error:', e);
     }
 
-    console.log('❌ Cache MISS:', key);
+    devLog('❌ Cache MISS:', key);
     return null;
   },
 
@@ -112,7 +119,7 @@ const apiCache = {
     try {
       localStorage.setItem(key, JSON.stringify(item));
     } catch (e) {
-      console.warn('Cache write error (quota?):', e);
+      devWarn('Cache write error (quota?):', e);
       // If quota exceeded, clear old cache items
       this.clearOldItems();
     }
@@ -218,7 +225,7 @@ const AmadeusAPI = {
       );
 
       if (!response.ok) {
-        console.error('❌ API returned error status:', response.status, response.statusText);
+        devError('❌ API returned error status:', response.status, response.statusText);
         return [];
       }
 
@@ -230,7 +237,7 @@ const AmadeusAPI = {
 
       return result;
     } catch (err) {
-      console.error('Airport search error:', err);
+      devError('Airport search error:', err);
       return [];
     }
   },
@@ -266,7 +273,7 @@ const AmadeusAPI = {
         // so we'll filter results after fetching for maxStops > 0
       }
 
-      console.log('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way', url });
+      devLog('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way', url });
 
       const response = await fetch(url, {
         headers: {
@@ -275,21 +282,21 @@ const AmadeusAPI = {
       });
 
       if (!response.ok) {
-        console.error('❌ API returned error status:', response.status, response.statusText);
+        devError('❌ API returned error status:', response.status, response.statusText);
         return [];
       }
 
       const data = await response.json();
-      console.log(`✈️ API Response for ${origin}->${destination} (${returnDate ? 'round-trip' : 'one-way'}):`, data);
+      devLog(`✈️ API Response for ${origin}->${destination} (${returnDate ? 'round-trip' : 'one-way'}):`, data);
 
       // Log itinerary structure for debugging
       if (data.data && data.data.length > 0) {
         const firstFlight = data.data[0];
-        console.log(`   Itineraries: ${firstFlight.itineraries.length} (${firstFlight.itineraries.length > 1 ? 'round-trip' : 'one-way'})`);
+        devLog(`   Itineraries: ${firstFlight.itineraries.length} (${firstFlight.itineraries.length > 1 ? 'round-trip' : 'one-way'})`);
       }
 
       if (data.errors) {
-        console.error('❌ API returned errors:', data.errors);
+        devError('❌ API returned errors:', data.errors);
         return [];
       }
 
@@ -304,7 +311,7 @@ const AmadeusAPI = {
             return stops <= filters.maxStops;
           });
         });
-        console.log(`   Filtered to ${results.length} flights with max ${filters.maxStops} stops`);
+        devLog(`   Filtered to ${results.length} flights with max ${filters.maxStops} stops`);
       }
 
       // Cache for 30 minutes
@@ -312,7 +319,7 @@ const AmadeusAPI = {
 
       return results;
     } catch (err) {
-      console.error('❌ Flight search error:', err);
+      devError('❌ Flight search error:', err);
       return [];
     }
   },
@@ -328,7 +335,7 @@ const AmadeusAPI = {
 
       const token = await this.getAccessToken();
       const url = `https://test.api.amadeus.com/v1/shopping/flight-destinations?origin=${origin}&max=50`;
-      console.log('🌍 Searching destinations from:', origin);
+      devLog('🌍 Searching destinations from:', origin);
 
       const response = await fetch(url, {
         headers: {
@@ -337,15 +344,15 @@ const AmadeusAPI = {
       });
 
       if (!response.ok) {
-        console.error('❌ API returned error status:', response.status, response.statusText);
+        devError('❌ API returned error status:', response.status, response.statusText);
         return [];
       }
 
       const data = await response.json();
-      console.log(`🗺️ Available destinations from ${origin}:`, data);
+      devLog(`🗺️ Available destinations from ${origin}:`, data);
 
       if (data.errors) {
-        console.error('❌ API returned errors:', data.errors);
+        devError('❌ API returned errors:', data.errors);
         return [];
       }
 
@@ -356,7 +363,7 @@ const AmadeusAPI = {
 
       return result;
     } catch (err) {
-      console.error('❌ Destination search error:', err);
+      devError('❌ Destination search error:', err);
       return [];
     }
   },
@@ -818,7 +825,7 @@ export default function HolidayPlanner() {
         e.preventDefault();
         setDebugMode(prev => {
           const newMode = !prev;
-          console.log(`🔧 Debug mode ${newMode ? 'ENABLED' : 'DISABLED'}`);
+          devLog(`🔧 Debug mode ${newMode ? 'ENABLED' : 'DISABLED'}`);
           return newMode;
         });
       }
@@ -826,6 +833,16 @@ export default function HolidayPlanner() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Cleanup all pending timeouts on unmount to prevent memory leaks
+  React.useEffect(() => {
+    return () => {
+      // Clear all search debounce timeouts
+      Object.values(searchTimeoutRef.current).forEach(timeoutId => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
+    };
   }, []);
 
   // Calculate weighted score (lower is better)
@@ -836,12 +853,12 @@ export default function HolidayPlanner() {
 
   // Debounced airport search
   const searchAirportsForCity = async (travelerId, cityName) => {
-    console.log('🔍 searchAirportsForCity called:', { travelerId, cityName });
+    devLog('🔍 searchAirportsForCity called:', { travelerId, cityName });
 
     const logEntry = { travelerId, cityName, timestamp: new Date().toISOString() };
 
     if (!cityName || cityName.length < 3) {
-      console.log('⚠️ cityName too short or empty:', cityName);
+      devLog('⚠️ cityName too short or empty:', cityName);
       logEntry.result = 'City name too short';
       setAirportSearchLog(prev => [...prev, logEntry]);
       return;
@@ -855,21 +872,21 @@ export default function HolidayPlanner() {
         key => key.toLowerCase() === cityName.toLowerCase().trim()
       );
 
-      console.log('🗺️ Looking for city:', cityName.toLowerCase().trim(), 'Found match:', cityKey);
+      devLog('🗺️ Looking for city:', cityName.toLowerCase().trim(), 'Found match:', cityKey);
 
       if (cityKey) {
         // Use predefined airport list with distances
         const airports = cityToAirportsMap[cityKey];
-        console.log('✅ Using predefined airports for', cityKey, ':', airports);
+        devLog('✅ Using predefined airports for', cityKey, ':', airports);
         logEntry.result = `Found in predefined list: ${airports.length} airports`;
         logEntry.airports = airports.map(a => a.code).join(', ');
         updateTraveler(travelerId, 'airports', airports);
         updateTraveler(travelerId, 'selectedAirport', airports[0].code);
       } else {
         // Fall back to API search - ONLY get AIRPORT codes, not city codes
-        console.log('🌐 Falling back to API search for:', cityName);
+        devLog('🌐 Falling back to API search for:', cityName);
         const airports = await AmadeusAPI.searchAirports(cityName);
-        console.log('📡 API returned:', airports);
+        devLog('📡 API returned:', airports);
         const formatted = airports
           .filter(airport => airport.subType === 'AIRPORT') // Only airports!
           .slice(0, 5)
@@ -879,7 +896,7 @@ export default function HolidayPlanner() {
             distance: 15, // Default distance if unknown
           }));
 
-        console.log('✈️ Formatted airports:', formatted);
+        devLog('✈️ Formatted airports:', formatted);
 
         if (formatted.length > 0) {
           logEntry.result = `API search: ${formatted.length} airports`;
@@ -887,12 +904,12 @@ export default function HolidayPlanner() {
           updateTraveler(travelerId, 'airports', formatted);
           updateTraveler(travelerId, 'selectedAirport', formatted[0].code);
         } else {
-          console.log('❌ No airports found after filtering');
+          devLog('❌ No airports found after filtering');
           logEntry.result = 'API search found 0 airports';
         }
       }
     } catch (err) {
-      console.error('❌ Airport search failed:', err);
+      devError('❌ Airport search failed:', err);
       logEntry.result = `Error: ${err.message}`;
     } finally {
       setSearchingAirports(prev => ({ ...prev, [travelerId]: false }));
@@ -974,7 +991,7 @@ export default function HolidayPlanner() {
     );
 
     if (isMajorHub) {
-      console.log(`    🏙️ ${traveler.origin} is a major hub - checking all ${airportsToCheck.length} airports`);
+      devLog(`    🏙️ ${traveler.origin} is a major hub - checking all ${airportsToCheck.length} airports`);
       return airportsToCheck;
     }
 
@@ -984,7 +1001,7 @@ export default function HolidayPlanner() {
       .slice(0, 3);
 
     if (limitedAirports.length < airportsToCheck.length) {
-      console.log(`    ✂️ Smart limiting: ${traveler.origin} - checking ${limitedAirports.length}/${airportsToCheck.length} airports`);
+      devLog(`    ✂️ Smart limiting: ${traveler.origin} - checking ${limitedAirports.length}/${airportsToCheck.length} airports`);
     }
 
     return limitedAirports;
@@ -1006,11 +1023,11 @@ export default function HolidayPlanner() {
   // Calculate price metrics for a destination across all travelers
   const calculateDestinationPrices = async (destinationCode) => {
     try {
-      console.log(`  💵 Calculating prices for ${destinationCode}...`);
+      devLog(`  💵 Calculating prices for ${destinationCode}...`);
       const pricePromises = travelers.map(async (traveler) => {
         const airportsToCheck = getAirportsToCheck(traveler);
         if (airportsToCheck.length === 0) {
-          console.log(`    ⚠️ ${traveler.name || traveler.origin}: No airports available`);
+          devLog(`    ⚠️ ${traveler.name || traveler.origin}: No airports available`);
           return null;
         }
 
@@ -1019,7 +1036,7 @@ export default function HolidayPlanner() {
         // Search from selected airports for this traveler
         const flightSearches = airportsToCheck.map(async (airport) => {
           const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
-          console.log(`    ${airport.code} -> ${destinationCode}: ${flights.length} flights`);
+          devLog(`    ${airport.code} -> ${destinationCode}: ${flights.length} flights`);
           if (flights.length === 0) return null;
 
           // Get cheapest flight from this airport
@@ -1038,7 +1055,7 @@ export default function HolidayPlanner() {
         const validResults = results.filter(r => r !== null);
 
         if (validResults.length === 0) {
-          console.log(`    ❌ ${traveler.name || traveler.origin}: No flights found from any airport`);
+          devLog(`    ❌ ${traveler.name || traveler.origin}: No flights found from any airport`);
           return null;
         }
 
@@ -1046,7 +1063,7 @@ export default function HolidayPlanner() {
         const best = validResults.reduce((best, current) =>
           current.weightedScore < best.weightedScore ? current : best
         );
-        console.log(`    ✓ ${traveler.name || traveler.origin}: Best price £${best.price}`);
+        devLog(`    ✓ ${traveler.name || traveler.origin}: Best price £${best.price}`);
         return best;
       });
 
@@ -1054,7 +1071,7 @@ export default function HolidayPlanner() {
       const validPrices = prices.filter(p => p !== null).map(p => p.price);
 
       if (validPrices.length === 0) {
-        console.log(`  ❌ ${destinationCode}: No valid prices found for any traveler`);
+        devLog(`  ❌ ${destinationCode}: No valid prices found for any traveler`);
         return null;
       }
 
@@ -1065,10 +1082,10 @@ export default function HolidayPlanner() {
         deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices))
       };
 
-      console.log(`  ✅ ${destinationCode}: avg £${result.avgPrice}, range £${result.minPrice}-£${result.maxPrice}`);
+      devLog(`  ✅ ${destinationCode}: avg £${result.avgPrice}, range £${result.minPrice}-£${result.maxPrice}`);
       return result;
     } catch (err) {
-      console.error(`❌ Error calculating prices for ${destinationCode}:`, err);
+      devError(`❌ Error calculating prices for ${destinationCode}:`, err);
       return null;
     }
   };
@@ -1081,7 +1098,7 @@ export default function HolidayPlanner() {
       setLoadingDestinations(true);
       try {
         const uniqueAirports = [...new Set(travelers.map(t => t.selectedAirport))];
-        console.log('🔍 Fetching destinations from airports:', uniqueAirports);
+        devLog('🔍 Fetching destinations from airports:', uniqueAirports);
 
         // Fetch destinations from each unique airport
         const destinationPromises = uniqueAirports.map(airport =>
@@ -1116,10 +1133,10 @@ export default function HolidayPlanner() {
             ...data
           }));
 
-        console.log('✅ Found destinations:', topDestinations);
+        devLog('✅ Found destinations:', topDestinations);
 
         // Get city names and calculate price metrics for each destination
-        console.log('💰 Calculating price metrics for destinations...');
+        devLog('💰 Calculating price metrics for destinations...');
         const destinationsWithPrices = await Promise.all(
           topDestinations.map(async (dest) => {
             const cityName = Object.entries(destinationAirportMap).find(([city, code]) => code === dest.code)?.[0];
@@ -1138,11 +1155,11 @@ export default function HolidayPlanner() {
         );
 
         const validDestinations = destinationsWithPrices.filter(d => d !== null);
-        console.log('✅ Price metrics calculated for', validDestinations.length, 'destinations');
+        devLog('✅ Price metrics calculated for', validDestinations.length, 'destinations');
 
         setAvailableDestinations(validDestinations);
       } catch (err) {
-        console.error('❌ Failed to fetch destinations:', err);
+        devError('❌ Failed to fetch destinations:', err);
         setAvailableDestinations([]);
       } finally {
         setLoadingDestinations(false);
@@ -1169,9 +1186,9 @@ export default function HolidayPlanner() {
     setSurveyShown(false); // Reset survey state for new search
 
     try {
-      console.log('🚀 Starting flight search for:', destinationCity);
-      console.log('📅 Date:', dateFrom);
-      console.log('👥 Travelers:', travelers);
+      devLog('🚀 Starting flight search for:', destinationCity);
+      devLog('📅 Date:', dateFrom);
+      devLog('👥 Travelers:', travelers);
 
       // Get destination airport code
       let destinationCode = destinationAirportMap[destinationCity];
@@ -1185,24 +1202,24 @@ export default function HolidayPlanner() {
         destinationCode = airportOnly[0].iataCode;
       }
 
-      console.log('🎯 Destination airport code:', destinationCode);
+      devLog('🎯 Destination airport code:', destinationCode);
 
       const filters = getFlightFilters();
 
       // Search flights for each traveler from selected nearby airports
       const flightPromises = travelers.map(async (traveler) => {
         const airportsToCheck = getAirportsToCheck(traveler);
-        console.log(`👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`, airportsToCheck);
+        devLog(`👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`, airportsToCheck);
 
         if (airportsToCheck.length === 0) {
-          console.warn(`⚠️ No airports available for ${traveler.name || traveler.origin}`);
+          devWarn(`⚠️ No airports available for ${traveler.name || traveler.origin}`);
           return null;
         }
 
         // Search from selected airports
         const allFlightSearches = airportsToCheck.map(async (airport) => {
           const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
-          console.log(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
+          devLog(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
 
           // Add airport info and weighted score to each flight
           return flights.map(flight => ({
@@ -1215,10 +1232,10 @@ export default function HolidayPlanner() {
         const allResults = await Promise.all(allFlightSearches);
         const allFlights = allResults.flat().filter(f => f);
 
-        console.log(`  📊 Total flights for ${traveler.name || traveler.origin}:`, allFlights.length);
+        devLog(`  📊 Total flights for ${traveler.name || traveler.origin}:`, allFlights.length);
 
         if (allFlights.length === 0) {
-          console.warn(`  ⚠️ No flights found for ${traveler.name || traveler.origin}`);
+          devWarn(`  ⚠️ No flights found for ${traveler.name || traveler.origin}`);
           return null;
         }
 
@@ -1243,8 +1260,8 @@ export default function HolidayPlanner() {
         }
       });
 
-      console.log('✅ Flight search complete. Found flights for', foundFlights, 'out of', travelers.length, 'travelers');
-      console.log('📦 Flight data:', flightMap);
+      devLog('✅ Flight search complete. Found flights for', foundFlights, 'out of', travelers.length, 'travelers');
+      devLog('📦 Flight data:', flightMap);
 
       // Collect debug information
       const debug = {
@@ -1296,7 +1313,7 @@ export default function HolidayPlanner() {
       // }
     } catch (err) {
       setError(err.message);
-      console.error('❌ Flight search failed:', err);
+      devError('❌ Flight search failed:', err);
       // Track search failed - API error
       trackSearchFailed('api_error', {
         destination: destinationCity,
@@ -2304,7 +2321,7 @@ export default function HolidayPlanner() {
                           const returnItinerary = flight.itineraries[1]; // Will be undefined for one-way
 
                           // Debug logging
-                          console.log(`📋 ${t.name || t.origin} flight details:`, {
+                          devLog(`📋 ${t.name || t.origin} flight details:`, {
                             totalItineraries: flight.itineraries.length,
                             hasReturn: !!returnItinerary,
                             price,
@@ -2597,7 +2614,7 @@ export default function HolidayPlanner() {
                 />
                 <button 
                   onClick={() => { 
-                    console.log('Survey:', surveyData); 
+                    devLog('Survey:', surveyData); 
                     setSurveySubmitted(true); 
                     setTimeout(() => setShowSurveyModal(false), 2000); 
                   }} 
