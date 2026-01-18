@@ -1109,10 +1109,28 @@ export default function HolidayPlanner() {
       // Fetch available destinations from all travelers' airports
       setLoadingDestinations(true);
       try {
+        // Debug: Log each traveler's airport situation
+        travelers.forEach((t, idx) => {
+          devLog(`👤 Traveler ${idx + 1} (${t.name || t.origin}):`);
+          devLog(`   - Total airports: ${t.airports?.length || 0}`);
+          devLog(`   - Excluded airports: ${t.excludedAirports?.length || 0}`);
+          devLog(`   - Selected airport: ${t.selectedAirport}`);
+          const airportsToCheck = getAirportsToCheck(t);
+          devLog(`   - Airports to check: ${airportsToCheck.length} - ${airportsToCheck.map(a => a.code).join(', ')}`);
+        });
+
         // Get ALL non-excluded airports from each traveler's home city
         const allAirports = travelers.flatMap(traveler => getAirportsToCheck(traveler));
         const uniqueAirports = [...new Set(allAirports.map(a => a.code))];
         devLog('🔍 Fetching destinations from ALL non-excluded airports:', uniqueAirports);
+
+        // Safety check: ensure we have at least one airport to search from
+        if (uniqueAirports.length === 0) {
+          devError('❌ No airports available to search destinations from!');
+          setAvailableDestinations([]);
+          setLoadingDestinations(false);
+          return;
+        }
 
         // Fetch destinations from each unique airport
         const destinationPromises = uniqueAirports.map(airport =>
