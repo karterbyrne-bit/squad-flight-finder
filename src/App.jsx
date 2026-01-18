@@ -1244,9 +1244,33 @@ export default function HolidayPlanner() {
         });
 
         const allResults = await Promise.all(allFlightSearches);
-        const allFlights = allResults.flat().filter(f => f);
+        let allFlights = allResults.flat().filter(f => f);
+        let usedFallback = false;
 
         devLog(`  📊 Total flights for ${traveler.name || traveler.origin}:`, allFlights.length);
+
+        // Fallback: If no direct flights found and direct filter was active, try with connecting flights
+        if (allFlights.length === 0 && filters.nonStop) {
+          devWarn(`  ⚠️ No direct flights found for ${traveler.name || traveler.origin}, trying connecting flights...`);
+
+          const fallbackFilters = { ...filters, nonStop: false };
+          const fallbackSearches = airportsToCheck.map(async (airport) => {
+            const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, fallbackFilters);
+            devLog(`  🔄 ${airport.code} -> ${destinationCode} (connecting): ${flights.length} flights found`);
+
+            return flights.map(flight => ({
+              ...flight,
+              departureAirport: airport,
+              weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance)
+            }));
+          });
+
+          const fallbackResults = await Promise.all(fallbackSearches);
+          allFlights = fallbackResults.flat().filter(f => f);
+          usedFallback = true;
+
+          devLog(`  📊 Total connecting flights for ${traveler.name || traveler.origin}:`, allFlights.length);
+        }
 
         if (allFlights.length === 0) {
           devWarn(`  ⚠️ No flights found for ${traveler.name || traveler.origin}`);
@@ -1260,7 +1284,8 @@ export default function HolidayPlanner() {
           travelerId: traveler.id,
           flights: sortedFlights.slice(0, 5), // Top 5 options
           cheapest: sortedFlights[0], // Best weighted option
-          allAirportOptions: airportsToCheck.length
+          allAirportOptions: airportsToCheck.length,
+          usedFallback // Flag to indicate connecting flights shown instead of direct
         };
       });
 
@@ -2366,6 +2391,15 @@ export default function HolidayPlanner() {
                                 </div>
                               </div>
 
+                              {/* Notice when showing connecting flights due to no direct flights available */}
+                              {data.usedFallback && (
+                                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                  <p className="text-xs text-amber-800 font-medium">
+                                    ℹ️ No direct flights available - showing best connecting flight
+                                  </p>
+                                </div>
+                              )}
+
                               <div className="space-y-3">
                                 {/* Outbound Flight */}
                                 <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
@@ -2578,6 +2612,11 @@ export default function HolidayPlanner() {
                 return (
                   <div key={t.id} className="p-4 bg-green-50 rounded-lg mb-3">
                     <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
+                    {data.usedFallback && (
+                      <p className="text-xs text-amber-700 mt-1 mb-1">
+                        ℹ️ No direct flights available - showing connecting flight
+                      </p>
+                    )}
                     <p className="text-sm text-gray-600">{airport.name} ({airport.code}) → {destination} • £{price}</p>
                     <div className="flex gap-2 mt-2">
                       <a
