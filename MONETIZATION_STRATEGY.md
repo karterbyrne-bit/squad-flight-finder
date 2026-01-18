@@ -8,11 +8,15 @@
 
 ## Executive Summary
 
-Squad Flight Finder has a **unique market position**: the only flight search platform optimizing for group travel fairness. This differentiation, combined with multiple revenue streams, positions us for profitability within 12-18 months.
+Squad Flight Finder has a **unique market position**: the only flight search platform optimizing for group travel fairness. However, we face significant challenges: cold start problem (no users), fierce competition (Google Flights, Skyscanner), and high user acquisition costs.
 
-**Target Revenue (Year 1):** $50,000 - $150,000
-**Target Revenue (Year 2):** $250,000 - $500,000
-**Path to Profitability:** 12-18 months
+**REALISTIC Projections:**
+- **Year 1:** £5,000 - £15,000 revenue (learning phase)
+- **Year 2:** £30,000 - £80,000 revenue (growth phase)
+- **Year 3:** £100,000 - £250,000 revenue (scale phase)
+- **Path to Profitability:** 18-24 months minimum
+
+**Key Assumption:** Bootstrap approach, limited marketing budget, organic growth focus.
 
 ---
 
@@ -23,22 +27,31 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 **Model:** Earn commission when users book flights through our partner links.
 
 #### Revenue Potential
-- **Commission Rate:** 2-5% of booking value
+- **Commission Rate:** 2-5% of booking value (if approved by partners)
 - **Average Booking Value:** £300-500 per person
-- **Commission per Booking:** £6-25 per person
+- **Commission per Booking:** £6-25 per person (varies widely by partner)
 - **Group Size Average:** 4 people = £24-100 per group booking
 
-**Year 1 Projections:**
-- 1,000 monthly active users
-- 5% booking conversion = 50 bookings/month
-- 4 people per booking = 200 travelers
-- £15 average commission per traveler = £3,000/month
-- **Annual: £36,000**
+**REALISTIC Year 1 Projections:**
+- 100-200 monthly active users (hard to grow from zero)
+- 2% booking conversion (new, unknown brand) = 2-4 bookings/month
+- 4 people per booking = 8-16 travelers/month
+- £10 average commission per traveler (conservative) = £80-160/month
+- **Annual: £1,000-2,000**
 
-**Year 2 Projections:**
-- 10,000 monthly active users
-- 7% booking conversion = 700 bookings/month
-- £10,500/month = **£126,000/year**
+**REALISTIC Year 2 Projections:**
+- 500-1,000 monthly active users (steady organic growth)
+- 3% booking conversion (building trust) = 15-30 bookings/month
+- 4 people per booking = 60-120 travelers/month
+- £12 average commission = £720-1,440/month
+- **Annual: £8,600-17,300**
+
+**CHALLENGES:**
+- Affiliate programs may reject new apps with low traffic
+- Cookie attribution issues (users might book elsewhere later)
+- 30-90 day payment delays
+- Many users will just use you for research, book direct for loyalty points
+- Google Flights sends users straight to airlines (hard to compete)
 
 #### Implementation Priority: PHASE 3 (Week 8-12)
 - [ ] Sign up for airline affiliate programs
@@ -99,19 +112,30 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 
 #### Revenue Potential
 
-**Year 1 Projections:**
-- 10,000 total users (by end of year)
-- 5% premium conversion = 500 Pro subscribers
-- £9.99 × 500 = £4,995/month
-- **Annual recurring revenue (ARR): £59,940**
-- Add Team tier: 10 teams × £29.99 = £300/month = £3,600/year
-- **Total: £63,540/year**
+**REALISTIC Year 1 Projections:**
+- 500-1,000 total users (by end of year) - organic growth is SLOW
+- 2% premium conversion (industry average for new apps) = 10-20 Pro subscribers
+- £9.99 × 15 average = £150/month
+- **Annual recurring revenue (ARR): £1,800**
+- Team tier: 0-1 teams (hard to sell B2B with no proof) = £0-360/year
+- **Total: £1,800-2,160/year**
+- **Reality check:** Most people won't pay if free tier works
 
-**Year 2 Projections:**
-- 50,000 total users
-- 7% conversion (improved features) = 3,500 Pro
-- £34,965/month Pro + £1,500/month Team
-- **ARR: £437,580**
+**REALISTIC Year 2 Projections:**
+- 2,000-5,000 total users (growth accelerates with word of mouth)
+- 3% conversion (building trust + better features) = 60-150 Pro
+- £9.99 × 100 average = £999/month
+- **ARR: £12,000**
+- Team tier: 2-3 teams = £60-90/month = £720-1,080/year
+- **Total ARR: £12,720-13,080**
+
+**CHALLENGES:**
+- People are used to free flight search (Google, Skyscanner)
+- Hard to justify £10/month when alternatives are free
+- Free tier may be "good enough" for most users
+- Churn is high for travel apps (people use once, then forget)
+- Annual plans reduce churn but harder to sell upfront
+- Need compelling Pro features that truly block free users
 
 #### Implementation Priority: PHASE 3 (Week 8-12)
 - [ ] Integrate Stripe for payments
@@ -259,56 +283,71 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 
 ## Revenue Timeline & Milestones
 
-### Year 1 (2026)
+### Year 1 (2026) - **Learning & Validation Phase**
 
 **Q1: Launch & Foundation**
 - Complete Phase 1 (documentation, security)
 - Complete Phase 2 (architecture refactoring)
-- **Revenue Goal:** £0 (pre-revenue)
+- **Revenue Goal:** £0 (pre-revenue, building product)
+- **User Goal:** Get first 50 users
 
 **Q2: Monetization Launch**
 - Complete Phase 3 (user accounts, PWA, booking integration)
-- Launch affiliate program
-- Launch Pro subscriptions (soft launch)
-- **Revenue Goal:** £2,000-5,000/month
+- Apply to affiliate programs (may get rejected, try multiple)
+- Launch Pro subscriptions (expect very low uptake)
+- **Revenue Goal:** £50-200/month (mostly testing)
+- **User Goal:** 100-200 total users
+- **Reality:** Might be £0 if no one converts yet
 
 **Q3: Growth & Optimization**
-- Complete Phase 4 (fairness features, price tracking)
-- Optimize conversion funnels
-- Add hotel/activity commissions
-- **Revenue Goal:** £5,000-10,000/month
+- Focus on user acquisition (SEO, content, word of mouth)
+- Iterate on product based on feedback
+- Test different Pro features to see what drives conversion
+- **Revenue Goal:** £200-500/month
+- **User Goal:** 300-500 total users
+- **Reality:** Slow organic growth, most users are free
 
-**Q4: Scale**
-- Complete Phase 5 (performance, polish)
-- Launch Team tier
-- Begin B2B outreach
-- **Revenue Goal:** £10,000-15,000/month
+**Q4: Refine**
+- Double down on what's working (if anything)
+- Consider pivoting features if conversion is too low
+- Start building content for SEO
+- **Revenue Goal:** £400-800/month
+- **User Goal:** 500-1,000 total users
 
-**Year 1 Total Revenue:** £50,000-100,000
+**Year 1 Total Revenue:** £5,000-15,000 (being optimistic)
+**More Likely:** £2,000-8,000
 
-### Year 2 (2027)
+### Year 2 (2027) - **Growth Phase**
 
-**Q1-Q2: User Growth**
-- 10x user growth (organic + paid marketing)
-- Launch internationalization (Phase 6)
-- Add 3 new languages
-- **Revenue Goal:** £15,000-25,000/month
+**Q1-Q2: User Acquisition Focus**
+- Invest in SEO and content (if Year 1 showed promise)
+- Maybe try small paid marketing budget (£500-1,000/month)
+- Improve product based on Year 1 learnings
+- **Revenue Goal:** £1,000-2,000/month
+- **User Goal:** 1,000-2,000 total users
+- **Reality:** Growth is still slow, word of mouth takes time
 
-**Q3-Q4: B2B & Expansion**
-- Close first 10 B2B accounts
-- Launch data products (pilot)
-- Optimize all funnels
-- **Revenue Goal:** £30,000-50,000/month
+**Q3-Q4: Scale What Works**
+- Double down on acquisition channels that worked
+- Consider B2B outreach if product is solid
+- Maybe add one new revenue stream (hotels?)
+- **Revenue Goal:** £2,000-4,000/month
+- **User Goal:** 2,000-5,000 total users
 
-**Year 2 Total Revenue:** £250,000-500,000
+**Year 2 Total Revenue:** £30,000-80,000
+**More Likely:** £20,000-50,000
 
-### Year 3 (2028)
+### Year 3 (2028) - **Scale Phase**
 
-- Hire sales team
-- Expand B2B to 50+ accounts
-- Launch data products fully
-- Consider Series A funding or remain bootstrapped
-- **Revenue Goal:** £750,000-1,500,000
+**IF** Year 1-2 show product-market fit:
+- Consider hiring (part-time help or contractor)
+- Invest more in marketing (paid ads, partnerships)
+- Expand B2B (with proof of concept)
+- Maybe raise small angel round (£50K-100K) to accelerate
+
+**Revenue Goal:** £100,000-250,000
+**Reality:** This depends entirely on whether you've found product-market fit
+**Possible outcome:** Still sub-£50K if market is smaller than expected
 
 ---
 
@@ -346,17 +385,27 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 
 ### Break-Even Analysis
 
-**Scenario A: Conservative**
-- Revenue: £50,000
+**Year 1 Realistic:**
+- Revenue: £5,000-15,000
 - Costs: £13,600
-- **Net Profit: £36,400** (73% margin!)
+- **Net Profit: -£8,600 to +£1,400** (LOSS to tiny profit)
+- **Reality:** You'll likely lose money Year 1 as you build
 
-**Scenario B: Optimistic**
-- Revenue: £100,000
-- Costs: £13,600
-- **Net Profit: £86,400** (86% margin!)
+**Year 2 Realistic:**
+- Revenue: £30,000-80,000
+- Costs: £15,000-20,000 (adding some marketing spend)
+- **Net Profit: £10,000-60,000** (If upper range, this is good!)
 
-**Break-Even Point:** £1,500/month in revenue (achievable by Month 6)
+**Year 3 Optimistic:**
+- Revenue: £100,000-250,000
+- Costs: £30,000-50,000 (hiring, more marketing)
+- **Net Profit: £50,000-200,000** (If you get here, celebrate!)
+
+**Break-Even Point:**
+- Monthly: £1,200/month to cover basics
+- **Realistically:** Month 12-18 before consistent profitability
+- **Optimistic:** Month 9-12
+- **Pessimistic:** Year 2+ or never (if market too small)
 
 ---
 
@@ -549,6 +598,88 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 
 ---
 
+## The Harsh Realities (Read This First)
+
+### Why This Might Not Work
+
+**1. The Market Might Be Too Small**
+- How often do groups of 3+ people from different cities plan trips together?
+- Might be a few times a year per group at most
+- Low frequency = hard to build habit = hard to monetize
+
+**2. Free Tier Might Be "Good Enough"**
+- If 3 travelers covers most use cases, no one upgrades
+- If caching means people stay under 5 searches/month, no need for Pro
+- You need to make free tier ACTUALLY limiting without annoying users
+
+**3. User Acquisition is REALLY Hard**
+- SEO takes 6-12 months to see results
+- Paid ads are expensive (£2-10 per click for travel keywords)
+- Competing against Google Flights (free, trusted, integrated)
+- Network effects are slow (one person plans trip, then forgets about app for a year)
+
+**4. Booking Conversion May Be Dismal**
+- People use comparison tools then book direct (airline loyalty points)
+- Cookie attribution breaks (mobile/desktop switching)
+- Trust issues: "Why should I click your link vs going direct?"
+- Affiliate programs might pay less than you expect or have strict terms
+
+**5. Premium Subscription is a Hard Sell**
+- Travel planning apps typically have 1-3% conversion (not 5-7%)
+- People plan trips infrequently - why pay monthly?
+- Competitors are free and "good enough"
+- Churn is high (people forget to cancel, then do after a few months)
+
+**6. You're Solo (Probably)**
+- Building product + marketing + sales + support = burnout
+- Slow development = slow iteration = slow learning
+- No cofounder to keep you motivated when it's hard
+
+**7. Timing Issues**
+- Takes 3-6 months to build monetization features
+- Takes 6-12 months to see if it works
+- By then, you might be out of money/motivation
+- Or Google adds group fairness to Google Flights (they can move fast)
+
+### What This Means
+
+**Expect:**
+- Year 1: £2K-8K revenue (barely covers costs)
+- Lots of free users who never convert
+- Slow, frustrating growth
+- Many failed experiments
+- Questioning whether it's worth it
+
+**Best Case:**
+- Year 2: £30K-50K (enough to be "ramen profitable")
+- Year 3: £100K+ (real business emerging)
+- Year 4-5: £250K+ (life-changing money)
+
+**Worst Case:**
+- You spend 12 months, make £1K total
+- Realize market is too niche
+- Shut down or pivot
+- Learning experience, not business success
+
+### Should You Still Do This?
+
+**Yes, if:**
+- You're solving a problem YOU have (and know others have it too)
+- You're okay with Year 1 being an expensive learning experience
+- You have runway (savings or day job) to sustain 12-18 months
+- You're building for the long-term (3-5 years)
+- You genuinely enjoy the problem space
+- You're prepared to pivot if initial approach doesn't work
+
+**No, if:**
+- You need revenue in 6 months to survive
+- You're expecting "startup lottery ticket" outcomes
+- You're not willing to grind through slow growth
+- You can't stomach losing £5-10K in Year 1
+- You'd quit after 12 months of minimal traction
+
+---
+
 ## Risks & Mitigations
 
 ### Revenue Risks
@@ -726,25 +857,75 @@ Squad Flight Finder has a **unique market position**: the only flight search pla
 
 ---
 
-## Summary: Path to £100K/Year
+## Summary: The Realistic Path
 
-**Month 1-3:** Build foundation + monetization features
-**Month 3-6:** Launch revenue streams, optimize conversions (£2K-5K/month)
-**Month 6-9:** Scale user growth, improve product (£5K-10K/month)
-**Month 9-12:** Add B2B, hit £10K+/month consistently
+### Year 1: Validation (£2K-15K revenue)
+**Month 1-3:** Build foundation + core features
+**Month 3-6:** Launch basic monetization, get first users (expect £0-100/month)
+**Month 6-9:** Iterate based on feedback, find product-market fit signals (£100-400/month)
+**Month 9-12:** Double down on what's working, content for SEO (£200-800/month)
 
-**Year 1 Total:** £50K-100K
-**Year 2 Target:** £250K-500K (scale users + B2B)
-**Year 3 Target:** £750K-1.5M (maturity + data products)
+**Year 1 Reality Check:**
+- You'll probably lose £5-10K after costs
+- 500-1,000 users if you're lucky
+- 10-20 paying customers at most
+- Lots of learning, little revenue
+- **This is normal for bootstrapped SaaS**
+
+### Year 2: Growth (£20K-80K revenue)
+- Organic growth from SEO and word of mouth
+- Product improvements based on Year 1 data
+- 1,000-5,000 users
+- 50-150 paying customers
+- Maybe first profitable months in Q3-Q4
+
+### Year 3+: Scale (£100K+ if successful)
+- This only happens if Year 1-2 showed real traction
+- Otherwise, pivot or shut down
+- Most startups don't make it this far
 
 ---
 
-**Your competitive advantage (group fairness) + multiple revenue streams + lean cost structure = highly profitable business model.**
+## The Honest Truth
 
-Focus on:
-1. **Build fast** (Phases 1-3 in 3 months)
-2. **Launch monetization early** (Month 3)
-3. **Optimize conversions** (never stop testing)
-4. **Scale what works** (double down on winning channels)
+**Your competitive advantage (group fairness)** is real, but:
+- Unknown if market is big enough
+- Unknown if people will pay for it
+- Takes 12-18 months to find out
 
-Let's make this profitable! 🚀💰
+**Multiple revenue streams** sound good, but:
+- Each one requires work to set up
+- Most will generate <£500/month Year 1
+- Focus on ONE that works, not six that don't
+
+**Lean cost structure** is your biggest advantage:
+- £13K/year in fixed costs is doable
+- Can sustain with savings/day job
+- Time to learn and iterate
+- No investor pressure
+
+### What To Do
+
+**First 90 days: VALIDATE, don't build everything**
+1. Build MVP with basic fairness search (Phase 1-2)
+2. Get 50-100 real users (friends, Reddit, etc.)
+3. Watch how they use it - do they come back?
+4. Talk to users - would they pay? For what?
+5. **THEN** decide what to build next
+
+**Don't:**
+- Build all six revenue streams
+- Expect revenue in Month 3
+- Quit your day job
+- Spend on paid ads before product-market fit
+
+**Do:**
+- Build minimum features to test the core hypothesis
+- Talk to users constantly
+- Iterate quickly based on feedback
+- Keep costs near zero until you see traction
+- Be prepared to pivot or kill it if no traction after 12 months
+
+---
+
+**This CAN work, but it's a multi-year grind with no guarantees. Go in with eyes open.** 👀
