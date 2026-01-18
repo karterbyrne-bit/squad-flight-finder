@@ -25,20 +25,20 @@ Squad Flight Finder has a **unique and valuable feature**: finding fair flight o
 
 ## Strategic Priorities
 
-### 1. **Lean on Your Differentiator** 🎯
-Your fairness algorithm is genuinely innovative. Make it the centerpiece of everything.
+### 1. **Revenue First** 💰
+Launch monetization within 3 months. Every feature decision should consider revenue impact. Target: £50K-100K Year 1, £250K-500K Year 2. See [MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md) for detailed plan.
 
-### 2. **Technical Foundation First** 🏗️
-Fix architecture and documentation before adding features. Technical debt compounds.
+### 2. **Lean on Your Differentiator** 🎯
+Your fairness algorithm is genuinely innovative and has NO competitors. Make it the centerpiece of everything and protect your competitive advantage.
 
-### 3. **Mobile-First** 📱
-Most travel searches happen on mobile. PWA is non-negotiable.
+### 3. **Technical Foundation First** 🏗️
+Fix architecture and documentation before adding features. Technical debt compounds and slows revenue generation.
 
-### 4. **Data-Driven Decisions** 📊
-Implement analytics early to guide feature development.
+### 4. **Mobile-First** 📱
+Most travel searches happen on mobile. PWA is non-negotiable for conversion optimization.
 
-### 5. **Monetization from Day 1** 💰
-Build affiliate partnerships and premium features into the roadmap.
+### 5. **Data-Driven Decisions** 📊
+Implement analytics early to guide feature development and optimize conversion funnels.
 
 ---
 
@@ -363,25 +363,45 @@ Build affiliate partnerships and premium features into the roadmap.
   - Optimize images
   - Touch gestures (swipe to delete traveler)
 
-### 3.5 Booking Integration
+### 3.5 Booking Integration ⭐ PRIMARY REVENUE STREAM
+
+**Target Revenue Year 1:** £36,000 (affiliate commissions)
+**Target Revenue Year 2:** £126,000
+
+**Expected Commission:** £15 average per traveler booked
+**Target Conversion:** 5% free users, 15% Pro users book
+
 - [ ] **Choose booking approach**
-  - Option A: Deep links to airlines (easiest, affiliate revenue)
-  - Option B: Deep links to OTAs (Expedia, Booking.com)
-  - Option C: Amadeus booking API (complex, full control)
-  - **Recommendation:** Start with A, add C later
+  - Option A: Deep links to airlines (easiest, affiliate revenue) ✅ START HERE
+  - Option B: Deep links to OTAs (Expedia, Booking.com) ✅ PARALLEL
+  - Option C: Amadeus booking API (complex, full control) - Year 2
+  - **Recommendation:** Start with A+B for maximum revenue
 
 - [ ] **Implement booking flow**
-  - "Book Now" button per flight
-  - Track referrals (affiliate links)
+  - Prominent "Book Now" buttons (test colors/placement)
+  - Track referrals (affiliate links with attribution)
   - Booking confirmation page
   - Add to trip history
-  - Email confirmation
+  - Email confirmation with details
+  - Follow-up: "Did you book successfully?"
 
-- [ ] **Affiliate partnerships**
-  - Sign up for airline affiliate programs
-  - Sign up for OTA programs (Skyscanner, Kayak)
+- [ ] **Affiliate partnerships** (Apply ASAP)
+  - Skyscanner Affiliate Program (30-day cookie, good rates) - PRIORITY 1
+  - Booking.com Partner Program (25% on hotels too) - PRIORITY 2
+  - Expedia Affiliate Network (package deals) - PRIORITY 3
+  - CJ Affiliate (multiple airlines)
+  - AWIN (European airlines)
+  - Direct airline programs (BA, Ryanair, EasyJet)
   - Implement tracking codes
-  - Revenue dashboard
+  - Revenue dashboard (track by partner)
+  - A/B test CTAs and messaging
+
+- [ ] **Conversion Optimization**
+  - Price guarantees ("We'll refund if you find cheaper")
+  - Urgency indicators ("Price may increase")
+  - Trust signals (secure booking, ATOL protected)
+  - Clear value prop ("Book directly, we just help you compare")
+  - Mobile-optimized booking flow
 
 ### 3.6 Itinerary Management
 - [ ] **Export features**
@@ -840,36 +860,60 @@ Build affiliate partnerships and premium features into the roadmap.
   - Corporate travel departments
   - University travel clubs
 
-### 6.4 Premium Features (Monetization)
-- [ ] **Free Tier**
-  - Up to 3 travelers
-  - Basic search
-  - No price alerts
+### 6.4 Premium Features (Monetization) ⭐ REVENUE CRITICAL
+
+**Target Revenue Year 1:** £60,000 ARR (500 Pro users × £9.99/month)
+**Target Revenue Year 2:** £440,000 ARR (3,500 Pro users × £9.99/month)
+
+See [MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md) for complete revenue plan.
+
+- [ ] **Free Tier** (User Acquisition)
+  - Up to 3 travelers (forces upgrade at 4)
+  - 5 searches per month (creates scarcity)
+  - Basic search only
+  - No price alerts (key Pro feature)
   - No save trips (localStorage only)
 
-- [ ] **Pro Tier** ($9/month or $79/year)
-  - Unlimited travelers
-  - Price alerts
-  - Unlimited saved trips
-  - Priority support
-  - Advanced filters
-  - Export itineraries
-  - No ads (if you add ads)
+- [ ] **Pro Tier** (£9.99/month or £79/year - £20 saved)
+  - **Unlimited travelers** (key for groups)
+  - **Unlimited searches**
+  - **Price tracking & alerts** (highest value feature)
+  - **Unlimited saved trips**
+  - **Fairness optimization suggestions** (monetize your differentiator!)
+  - **Export itineraries (PDF)**
+  - **Priority support**
+  - **No ads**
+  - **Early access to new features**
+  - Target: 5-7% conversion rate
 
-- [ ] **Team Tier** ($29/month)
+- [ ] **Team Tier** (£29.99/month - B2B focus)
+  - Everything in Pro
   - Multiple trip organizers
   - Admin dashboard
   - Team collaboration
-  - Custom branding
+  - Branded exports
   - API access (future)
-  - Dedicated support
+  - Dedicated account manager
+  - Volume booking discounts
+  - Target: 10 teams Year 1, 50 teams Year 2
 
 - [ ] **Payment Integration**
-  - Stripe or Paddle
+  - Stripe (recommended - best UX)
   - Subscription management
-  - Free trial (14 days)
+  - 14-day free trial (increases conversion)
   - Upgrade/downgrade flows
   - Billing portal
+  - Dunning (failed payment recovery)
+  - Promo codes / discounts
+  - Annual plan incentives
+
+- [ ] **Conversion Optimization**
+  - Contextual upgrade prompts
+  - Feature gating at right moments
+  - Social proof ("Join 500 Pro users")
+  - Exit intent offers
+  - Email nurture sequences
+  - A/B test pricing and messaging
 
 ### 6.5 Community & Support
 - [ ] **Support System**

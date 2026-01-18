@@ -1,6 +1,8 @@
-# Contributing to Squad Flight Finder
+# Squad Flight Finder: Internal Development Guide
 
-Thank you for your interest in contributing to Squad Flight Finder! This document provides guidelines and instructions for contributing.
+**CONFIDENTIAL - Internal Use Only**
+
+This document provides guidelines and instructions for the Squad Flight Finder development team. This is a proprietary commercial product.
 
 ## 🌟 How Can I Contribute?
 
@@ -382,18 +384,17 @@ Stuck? Here's how to get help:
 4. **Create an issue**: For bugs or feature requests
 5. **Tag maintainers**: If urgent (use sparingly)
 
-## 📜 License
+## 📜 Intellectual Property
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+All code and contributions are proprietary to Squad Flight Finder. By contributing, team members agree that all work product belongs to the company.
 
 ## 🙏 Recognition
 
-Contributors will be:
-- Listed in CONTRIBUTORS.md
-- Mentioned in release notes
-- Credited in documentation they write
-
-Significant contributors may be invited to become maintainers.
+Team contributions are recognized through:
+- Internal team acknowledgment
+- Performance reviews
+- Bonus/equity considerations (as applicable)
+- Leadership opportunities
 
 ---
 
