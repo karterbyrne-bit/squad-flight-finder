@@ -14,9 +14,9 @@ import {
 // DEVELOPMENT LOGGING HELPER
 // Only logs in development mode to avoid performance impact and data leakage in production
 const isDev = import.meta.env.DEV;
-const devLog = (...args) => { if (isDev) devLog(...args); };
-const devError = (...args) => { if (isDev) devError(...args); };
-const devWarn = (...args) => { if (isDev) devWarn(...args); };
+const devLog = (...args) => { if (isDev) console.log(...args); };
+const devError = (...args) => { if (isDev) console.error(...args); };
+const devWarn = (...args) => { if (isDev) console.warn(...args); };
 
 // API CALL TRACKING
 const apiCallTracker = {
@@ -1109,8 +1109,10 @@ export default function HolidayPlanner() {
       // Fetch available destinations from all travelers' airports
       setLoadingDestinations(true);
       try {
-        const uniqueAirports = [...new Set(travelers.map(t => t.selectedAirport))];
-        devLog('🔍 Fetching destinations from airports:', uniqueAirports);
+        // Get ALL non-excluded airports from each traveler's home city
+        const allAirports = travelers.flatMap(traveler => getAirportsToCheck(traveler));
+        const uniqueAirports = [...new Set(allAirports.map(a => a.code))];
+        devLog('🔍 Fetching destinations from ALL non-excluded airports:', uniqueAirports);
 
         // Fetch destinations from each unique airport
         const destinationPromises = uniqueAirports.map(airport =>
@@ -1755,8 +1757,24 @@ export default function HolidayPlanner() {
                                             // Remove from excluded list
                                             updateTraveler(t.id, 'excludedAirports', excluded.filter(code => code !== a.code));
                                           } else {
+                                            // Prevent unchecking the last airport - at least one must remain selected
+                                            const currentlyIncluded = t.airports.filter(airport => !excluded.includes(airport.code));
+                                            if (currentlyIncluded.length <= 1) {
+                                              // Don't allow unchecking the last airport
+                                              return;
+                                            }
                                             // Add to excluded list
                                             updateTraveler(t.id, 'excludedAirports', [...excluded, a.code]);
+
+                                            // If we're excluding the currently selected airport, update selectedAirport to the first non-excluded one
+                                            if (t.selectedAirport === a.code) {
+                                              const remainingAirports = t.airports.filter(airport =>
+                                                airport.code !== a.code && !excluded.includes(airport.code)
+                                              );
+                                              if (remainingAirports.length > 0) {
+                                                updateTraveler(t.id, 'selectedAirport', remainingAirports[0].code);
+                                              }
+                                            }
                                           }
                                         }}
                                         className="w-3.5 h-3.5 text-green-600 rounded border-gray-300"
