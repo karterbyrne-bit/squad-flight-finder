@@ -1109,8 +1109,10 @@ export default function HolidayPlanner() {
       // Fetch available destinations from all travelers' airports
       setLoadingDestinations(true);
       try {
-        const uniqueAirports = [...new Set(travelers.map(t => t.selectedAirport))];
-        devLog('🔍 Fetching destinations from airports:', uniqueAirports);
+        // Get ALL non-excluded airports from each traveler's home city
+        const allAirports = travelers.flatMap(traveler => getAirportsToCheck(traveler));
+        const uniqueAirports = [...new Set(allAirports.map(a => a.code))];
+        devLog('🔍 Fetching destinations from ALL non-excluded airports:', uniqueAirports);
 
         // Fetch destinations from each unique airport
         const destinationPromises = uniqueAirports.map(airport =>
