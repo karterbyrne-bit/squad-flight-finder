@@ -797,6 +797,8 @@ export default function HolidayPlanner() {
   // Debug mode state - hidden by default, toggle with Ctrl+Shift+D
   const [debugMode, setDebugMode] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(null); // Store traveler id to confirm removal
+  const [showDuplicateModal, setShowDuplicateModal] = useState(null); // Store traveler to duplicate
+  const [duplicateName, setDuplicateName] = useState(''); // Name for duplicated traveler
 
   // Refs for debouncing
   const searchTimeoutRef = useRef({});
@@ -918,13 +920,23 @@ export default function HolidayPlanner() {
   };
 
   const duplicateTraveler = (travelerToDuplicate) => {
-    // Create a copy of the traveler with a new ID but same details
-    const newTraveler = {
-      ...travelerToDuplicate,
-      id: Date.now(),
-      name: travelerToDuplicate.name ? `${travelerToDuplicate.name} (copy)` : ''
-    };
-    setTravelers([...travelers, newTraveler]);
+    // Show modal to get name for duplicated traveler
+    setDuplicateName(travelerToDuplicate.name ? `${travelerToDuplicate.name} (copy)` : '');
+    setShowDuplicateModal(travelerToDuplicate);
+  };
+
+  const confirmDuplicateTraveler = () => {
+    if (showDuplicateModal) {
+      // Create a copy of the traveler with a new ID and the entered name
+      const newTraveler = {
+        ...showDuplicateModal,
+        id: Date.now(),
+        name: duplicateName
+      };
+      setTravelers([...travelers, newTraveler]);
+      setShowDuplicateModal(null);
+      setDuplicateName('');
+    }
   };
 
   const removeTraveler = (id) => {
@@ -1107,10 +1119,12 @@ export default function HolidayPlanner() {
           }
         });
 
-        // Convert to array and take top destinations by availability
+        // Convert to array - include ALL unique destinations, not just top 30
+        // Previously: sorted by count and took only top 30, which filtered out destinations
+        // unique to minority airports (e.g., Birmingham when most travelers are from London)
         const topDestinations = Array.from(destinationMap.entries())
           .sort((a, b) => b[1].count - a[1].count)
-          .slice(0, 30) // Get more destinations for better selection
+          // Removed .slice(0, 30) to show ALL destinations from ALL origin airports
           .map(([code, data]) => ({
             code,
             ...data
@@ -2474,6 +2488,48 @@ export default function HolidayPlanner() {
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all"
                 >
                   Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Duplicate Traveler Modal */}
+        {showDuplicateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Duplicate Traveler</h3>
+              <p className="text-gray-600 mb-4">
+                This will copy all details from {showDuplicateModal.name || 'this traveler'}. Enter a name for the new traveler:
+              </p>
+              <input
+                type="text"
+                placeholder="Name (optional)"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmDuplicateTraveler();
+                  }
+                }}
+                autoFocus
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all mb-6"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDuplicateModal(null);
+                    setDuplicateName('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDuplicateTraveler}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-all"
+                >
+                  Duplicate
                 </button>
               </div>
             </div>
