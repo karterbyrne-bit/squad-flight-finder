@@ -1,6 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { Plane, Users, Plus, X, Search, DollarSign, Scale, Calendar, Briefcase, Palmtree, Mountain, Gem, Coffee, Share2, Copy, Check, Info, ArrowRight, ArrowLeft, Globe, ArrowUpDown, ExternalLink, TrendingDown, Clock, MapPin } from 'lucide-react';
 import './App.css';
+import {
+  trackSearchInitiated,
+  trackResultsLoaded,
+  trackAffiliateClick,
+  trackSearchFailed,
+  trackTravelerModified,
+  trackPopularOrigin,
+  trackPopularDestination,
+} from './utils/analytics';
 
 // API CALL TRACKING
 const apiCallTracker = {
@@ -902,7 +911,10 @@ export default function HolidayPlanner() {
   };
 
   const addTraveler = () => {
-    setTravelers([...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }]);
+    const newTravelers = [...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }];
+    setTravelers(newTravelers);
+    // Track traveler added
+    trackTravelerModified('added', newTravelers.length);
   };
 
   const duplicateTraveler = (travelerToDuplicate) => {
@@ -922,8 +934,11 @@ export default function HolidayPlanner() {
   };
 
   const confirmRemoveTraveler = (id) => {
-    setTravelers(travelers.filter(t => t.id !== id));
+    const newTravelers = travelers.filter(t => t.id !== id);
+    setTravelers(newTravelers);
     setShowRemoveConfirm(null);
+    // Track traveler removed
+    trackTravelerModified('removed', newTravelers.length);
   };
 
   const updateTraveler = (id, field, value) => {
@@ -1256,6 +1271,16 @@ export default function HolidayPlanner() {
 
       if (foundFlights === 0) {
         setError('No flights found for the selected date and destination. Try a different date or destination.');
+        // Track search failed - no results
+        trackSearchFailed('no_results', {
+          destination: destinationCity,
+          travelers: travelers.length,
+          date: dateFrom
+        });
+      } else {
+        // Track successful results loaded
+        const fairnessScore = calculateFairnessScore();
+        trackResultsLoaded(destinationCity, fairnessScore, foundFlights);
       }
 
       setFlightData(flightMap);
@@ -1272,6 +1297,12 @@ export default function HolidayPlanner() {
     } catch (err) {
       setError(err.message);
       console.error('❌ Flight search failed:', err);
+      // Track search failed - API error
+      trackSearchFailed('api_error', {
+        destination: destinationCity,
+        error: err.message,
+        travelers: travelers.length
+      });
     } finally {
       setLoading(false);
     }
@@ -1280,6 +1311,16 @@ export default function HolidayPlanner() {
   const searchTrips = () => {
     const dest = selectedDestination || customDestination;
     if (dest) {
+      // Track search initiated
+      const uniqueCities = new Set(travelers.map(t => t.origin).filter(Boolean));
+      trackSearchInitiated(travelers.length, uniqueCities.size);
+
+      // Track popular origins and destination
+      travelers.forEach(t => {
+        if (t.origin) trackPopularOrigin(t.origin);
+      });
+      trackPopularDestination(dest);
+
       searchFlightsForDestination(dest);
     }
   };
@@ -2466,11 +2507,20 @@ export default function HolidayPlanner() {
                     <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
                     <p className="text-sm text-gray-600">{airport.name} ({airport.code}) → {destination} • £{price}</p>
                     <div className="flex gap-2 mt-2">
-                      <a 
-                        href={`https://www.skyscanner.net/transport/flights/${airport.code}/${destCode}/${dateFrom}/?adults=1`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={`https://www.skyscanner.net/transport/flights/${airport.code}/${destCode}/${dateFrom}/?adults=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm font-semibold text-center hover:bg-blue-700"
+                        onClick={() => {
+                          // Track affiliate click (MONEY EVENT)
+                          trackAffiliateClick(
+                            t.origin || airport.city,
+                            price,
+                            calculateFairnessScore(),
+                            destination
+                          );
+                        }}
                       >
                         Skyscanner <ExternalLink className="w-3 inline" />
                       </a>
