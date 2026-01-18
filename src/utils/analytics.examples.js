@@ -1,231 +1,351 @@
 /**
- * Google Analytics Event Tracking - Usage Examples
+ * Google Analytics - Squad Flight Finder Implementation Examples
  *
- * This file demonstrates how to use the analytics utility throughout your application.
- * Import the functions you need and call them at the appropriate places in your code.
+ * This file shows exactly how and where to implement the 12 core events
+ * in your Squad Flight Finder application.
  */
 
 import {
-  trackEvent,
-  trackFlightSearch,
-  trackFlightSelection,
-  trackAddTraveler,
-  trackRemoveTraveler,
-  trackShare,
-  trackFilterApplied,
-  trackAPIError,
-  trackPageView,
-  trackEngagement,
+  trackSearchInitiated,
+  trackResultsLoaded,
+  trackAffiliateClick,
+  trackSearchFailed,
+  trackSurveySubmitted,
+  trackEmailCollected,
+  trackDestinationCompared,
+  trackTravelerModified,
+  trackCityAutocompleteFailed,
+  trackResultsAbandoned,
+  trackPopularOrigin,
+  trackPopularDestination,
 } from './analytics';
 
 // ============================================================================
-// EXAMPLE 1: Track Flight Searches
+// EVENT 1: SEARCH_INITIATED
+// Trigger: User clicks "Find Flights" button
 // ============================================================================
-// Call this when a user submits a flight search
-const handleFlightSearch = (formData) => {
+const handleSearchSubmit = (travelers, destination) => {
+  // Extract unique origin cities from travelers
+  const uniqueCities = new Set(travelers.map(t => t.city));
+
+  // Track the search
+  trackSearchInitiated(travelers.length, uniqueCities.size);
+
+  // Track each origin city for popular_origin analytics
+  travelers.forEach(traveler => {
+    trackPopularOrigin(traveler.city);
+  });
+
+  // Track destination for popular_destination analytics
+  trackPopularDestination(destination);
+
   // Your existing search logic...
-  const searchParams = {
-    origin: formData.origin,
-    destination: formData.destination,
-    travelers: formData.travelers,
-    searchType: 'multi-person',
-  };
-
-  // Track the search event
-  trackFlightSearch(searchParams);
-
-  // Continue with your API call...
+  performFlightSearch(travelers, destination);
 };
 
 // ============================================================================
-// EXAMPLE 2: Track Flight Selection
+// EVENT 2: RESULTS_LOADED
+// Trigger: API successfully returns flight results and they're displayed
 // ============================================================================
-// Call this when a user clicks on a specific flight option
-const handleFlightClick = (flight) => {
-  trackFlightSelection({
-    airline: flight.airline,
-    price: flight.price,
-    flightNumber: flight.flightNumber || 'unknown',
-  });
+const handleResultsSuccess = (results, destination) => {
+  // Calculate fairness score (your existing logic)
+  const fairnessScore = calculateFairnessScore(results);
 
-  // Your existing logic for handling flight selection...
+  // Count flight options
+  const numOptions = results.flights?.length || 0;
+
+  // Track successful results load
+  trackResultsLoaded(destination, fairnessScore, numOptions);
+
+  // Display results to user...
+  setFlightResults(results);
+
+  // Start tracking for potential abandonment
+  startAbandonmentTimer(fairnessScore);
 };
 
 // ============================================================================
-// EXAMPLE 3: Track Add/Remove Traveler
+// EVENT 3: AFFILIATE_CLICK (MONEY EVENT!)
+// Trigger: User clicks Skyscanner link on any flight option
 // ============================================================================
-const handleAddTraveler = (travelers) => {
-  // Your existing logic to add traveler...
-  const newTravelers = [...travelers, { name: '' }];
+const handleSkyscannerClick = (flight, travelerCity, destination, fairnessScore) => {
+  // Track the affiliate click - YOUR KEY CONVERSION
+  trackAffiliateClick(
+    travelerCity,
+    flight.price,
+    fairnessScore,
+    destination
+  );
 
-  // Track the event
-  trackAddTraveler(newTravelers.length);
-
-  return newTravelers;
+  // Open Skyscanner in new tab
+  window.open(flight.skyscannerUrl, '_blank');
 };
 
-const handleRemoveTraveler = (travelers, index) => {
-  // Your existing logic to remove traveler...
-  const newTravelers = travelers.filter((_, i) => i !== index);
-
-  // Track the event
-  trackRemoveTraveler(newTravelers.length);
-
-  return newTravelers;
+// Example in a FlightCard component:
+const FlightCard = ({ flight, travelerCity, destination, fairnessScore }) => {
+  return (
+    <div className="flight-card">
+      <div className="flight-details">
+        {/* Flight info */}
+      </div>
+      <button
+        onClick={() => handleSkyscannerClick(flight, travelerCity, destination, fairnessScore)}
+        className="book-button"
+      >
+        Book on Skyscanner
+      </button>
+    </div>
+  );
 };
 
 // ============================================================================
-// EXAMPLE 4: Track Share Actions
+// EVENT 4: SEARCH_FAILED
+// Trigger: API error, no results, or timeout
 // ============================================================================
-const handleCopyLink = async () => {
+const performFlightSearch = async (travelers, destination) => {
   try {
-    await navigator.clipboard.writeText(window.location.href);
-    trackShare('clipboard');
-    // Show success message...
-  } catch (error) {
-    console.error('Failed to copy link', error);
-  }
-};
-
-const handleShareButton = () => {
-  // Generate shareable link...
-  trackShare('link');
-  // Your sharing logic...
-};
-
-// ============================================================================
-// EXAMPLE 5: Track Filter Applications
-// ============================================================================
-const handlePriceFilterChange = (maxPrice) => {
-  trackFilterApplied({
-    type: 'price',
-    value: maxPrice,
-  });
-
-  // Apply filter logic...
-};
-
-const handleAirlineFilter = (airline) => {
-  trackFilterApplied({
-    type: 'airline',
-    value: airline,
-  });
-
-  // Apply filter logic...
-};
-
-// ============================================================================
-// EXAMPLE 6: Track API Errors
-// ============================================================================
-const fetchFlightData = async (searchParams) => {
-  try {
-    const response = await fetch('/api/flights', {
+    const response = await fetch('/api/search', {
       method: 'POST',
-      body: JSON.stringify(searchParams),
+      body: JSON.stringify({ travelers, destination }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    return await response.json();
-  } catch (error) {
-    // Track the error
-    trackAPIError('/api/flights', error.message);
+    const data = await response.json();
 
-    // Handle error in your UI...
-    throw error;
+    // Check for no results
+    if (!data.flights || data.flights.length === 0) {
+      trackSearchFailed('no_results', { travelers, destination });
+      showNoResultsMessage();
+      return;
+    }
+
+    handleResultsSuccess(data, destination);
+
+  } catch (error) {
+    // Track the failure
+    trackSearchFailed('api_error', {
+      travelers: travelers.length,
+      destination,
+      error: error.message
+    });
+
+    showErrorMessage();
   }
 };
 
 // ============================================================================
-// EXAMPLE 7: Track Custom Events
+// EVENT 5: SURVEY_SUBMITTED
+// Trigger: User submits post-results feedback form
 // ============================================================================
-const handleCurrencyChange = (newCurrency) => {
-  trackEvent('currency_change', {
-    currency: newCurrency,
-  });
+const handleSurveySubmit = (formData) => {
+  trackSurveySubmitted(
+    formData.wouldUseAgain === 'yes',
+    formData.foundUseful === 'yes'
+  );
 
-  // Your currency change logic...
+  // Send to backend, show thank you message, etc.
+  submitSurveyToBackend(formData);
 };
 
-const handleSortChange = (sortBy) => {
-  trackEvent('sort_results', {
-    sort_by: sortBy,
+// Example survey component:
+const FeedbackSurvey = () => {
+  const [formData, setFormData] = useState({
+    wouldUseAgain: null,
+    foundUseful: null,
   });
 
-  // Your sort logic...
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSurveySubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>Would you use this again?</label>
+      <input type="radio" name="wouldUseAgain" value="yes" onChange={(e) => setFormData({...formData, wouldUseAgain: e.target.value})} />
+      <input type="radio" name="wouldUseAgain" value="no" onChange={(e) => setFormData({...formData, wouldUseAgain: e.target.value})} />
+
+      <label>Did you find this useful?</label>
+      <input type="radio" name="foundUseful" value="yes" onChange={(e) => setFormData({...formData, foundUseful: e.target.value})} />
+      <input type="radio" name="foundUseful" value="no" onChange={(e) => setFormData({...formData, foundUseful: e.target.value})} />
+
+      <button type="submit">Submit Feedback</button>
+    </form>
+  );
 };
 
 // ============================================================================
-// EXAMPLE 8: Track Engagement Time (using React useEffect)
+// EVENT 6: EMAIL_COLLECTED
+// Trigger: User signs up for launch list or newsletter
 // ============================================================================
-// import { useEffect } from 'react';
-//
-// const FlightResultsComponent = () => {
-//   useEffect(() => {
-//     const startTime = Date.now();
-//
-//     return () => {
-//       const endTime = Date.now();
-//       const timeSpent = Math.floor((endTime - startTime) / 1000);
-//
-//       if (timeSpent > 5) { // Only track if user spent more than 5 seconds
-//         trackEngagement(timeSpent, 'viewing_results');
-//       }
-//     };
-//   }, []);
-//
-//   return <div>Your flight results...</div>;
-// };
+const handleEmailSignup = async (email, source) => {
+  try {
+    await submitEmailToBackend(email);
+
+    // Track where the email was collected
+    trackEmailCollected(source); // 'homepage', 'results_page', 'footer'
+
+    showSuccessMessage('Thanks for signing up!');
+  } catch (error) {
+    console.error('Email signup failed', error);
+  }
+};
+
+// Example usage in different places:
+// On homepage: trackEmailCollected('homepage')
+// On results page: trackEmailCollected('results_page')
+// In footer: trackEmailCollected('footer')
 
 // ============================================================================
-// EXAMPLE 9: Common Events to Track in Your Flight Finder
+// EVENT 7: DESTINATION_COMPARED
+// Trigger: User searches multiple destinations in same session
 // ============================================================================
+// Track this at the session level
+let searchedDestinations = new Set();
 
-// Track when user expands flight details
-const trackFlightDetailsView = (flightId) => {
-  trackEvent('view_flight_details', {
-    flight_id: flightId,
-  });
+const trackDestinationSearch = (destination) => {
+  searchedDestinations.add(destination);
+
+  // Only track comparison if user has searched 2+ destinations
+  if (searchedDestinations.size >= 2) {
+    trackDestinationCompared(searchedDestinations.size);
+  }
 };
 
-// Track when user compares flights
-const trackFlightComparison = (numberOfFlights) => {
-  trackEvent('compare_flights', {
-    flight_count: numberOfFlights,
-  });
+// Call this when results load
+const handleResultsSuccess_WithComparison = (results, destination) => {
+  trackDestinationSearch(destination);
+
+  // Your existing results handling...
+  handleResultsSuccess(results, destination);
 };
 
-// Track when no results are found
-const trackNoResults = (searchParams) => {
-  trackEvent('no_results_found', {
-    origin: searchParams.origin,
-    destination: searchParams.destination,
-  });
+// ============================================================================
+// EVENT 8: TRAVELER_MODIFIED
+// Trigger: User adds or removes travelers after initial load
+// ============================================================================
+const handleAddTraveler = (currentTravelers) => {
+  const newTravelers = [...currentTravelers, { name: '', city: '' }];
+
+  trackTravelerModified('added', newTravelers.length);
+
+  return newTravelers;
 };
 
-// Track when user exports/downloads results
-const trackExport = (format) => {
-  trackEvent('export_results', {
-    format: format, // e.g., 'pdf', 'csv', 'image'
-  });
+const handleRemoveTraveler = (currentTravelers, indexToRemove) => {
+  const newTravelers = currentTravelers.filter((_, i) => i !== indexToRemove);
+
+  trackTravelerModified('removed', newTravelers.length);
+
+  return newTravelers;
 };
 
-export {
-  handleFlightSearch,
-  handleFlightClick,
-  handleAddTraveler,
-  handleRemoveTraveler,
-  handleCopyLink,
-  handleShareButton,
-  handlePriceFilterChange,
-  handleAirlineFilter,
-  fetchFlightData,
-  handleCurrencyChange,
-  handleSortChange,
-  trackFlightDetailsView,
-  trackFlightComparison,
-  trackNoResults,
-  trackExport,
+// ============================================================================
+// EVENT 9: CITY_AUTOCOMPLETE_FAILED
+// Trigger: User enters city that doesn't match your mapping
+// ============================================================================
+const handleCityInputBlur = (cityInput, validCities) => {
+  // Check if the input matches any valid city
+  const isValid = validCities.some(city =>
+    city.toLowerCase() === cityInput.toLowerCase()
+  );
+
+  if (!isValid && cityInput.length > 0) {
+    // Track failed autocomplete
+    trackCityAutocompleteFailed(cityInput);
+
+    // Show error message to user
+    showCityValidationError(cityInput);
+  }
+};
+
+// ============================================================================
+// EVENT 10: RESULTS_ABANDONED
+// Trigger: User views results but leaves without clicking Skyscanner
+// ============================================================================
+let resultsStartTime = null;
+let currentFairnessScore = null;
+let userClickedAffiliate = false;
+
+const startAbandonmentTimer = (fairnessScore) => {
+  resultsStartTime = Date.now();
+  currentFairnessScore = fairnessScore;
+  userClickedAffiliate = false;
+};
+
+// Track abandonment when component unmounts or user navigates away
+const trackAbandonment = () => {
+  if (resultsStartTime && !userClickedAffiliate) {
+    const timeOnResults = Math.floor((Date.now() - resultsStartTime) / 1000);
+
+    trackResultsAbandoned(timeOnResults, currentFairnessScore);
+  }
+};
+
+// In your Results component:
+// useEffect(() => {
+//   return () => {
+//     trackAbandonment();
+//   };
+// }, []);
+
+// When affiliate link is clicked:
+const handleSkyscannerClick_WithAbandonment = (flight, travelerCity, destination, fairnessScore) => {
+  userClickedAffiliate = true; // Prevent abandonment tracking
+
+  trackAffiliateClick(travelerCity, flight.price, fairnessScore, destination);
+
+  window.open(flight.skyscannerUrl, '_blank');
+};
+
+// ============================================================================
+// COMPLETE EXAMPLE: Search Flow with All Events
+// ============================================================================
+const CompleteSearchFlow = () => {
+  const [travelers, setTravelers] = useState([{ name: '', city: '' }]);
+  const [destination, setDestination] = useState('');
+  const [results, setResults] = useState(null);
+
+  const handleSearch = async () => {
+    // EVENT 1: Search initiated
+    const uniqueCities = new Set(travelers.map(t => t.city));
+    trackSearchInitiated(travelers.length, uniqueCities.size);
+
+    // EVENT 11 & 12: Track popular origins and destination
+    travelers.forEach(t => trackPopularOrigin(t.city));
+    trackPopularDestination(destination);
+
+    try {
+      const data = await fetchFlights(travelers, destination);
+
+      if (!data.flights || data.flights.length === 0) {
+        // EVENT 4: Search failed - no results
+        trackSearchFailed('no_results', { travelers, destination });
+        return;
+      }
+
+      // EVENT 2: Results loaded
+      const fairnessScore = calculateFairnessScore(data);
+      trackResultsLoaded(destination, fairnessScore, data.flights.length);
+
+      // EVENT 7: Destination compared (if multiple searches)
+      trackDestinationSearch(destination);
+
+      setResults({ ...data, fairnessScore });
+      startAbandonmentTimer(fairnessScore);
+
+    } catch (error) {
+      // EVENT 4: Search failed - API error
+      trackSearchFailed('api_error', { error: error.message });
+    }
+  };
+
+  return (
+    <div>
+      {/* Your UI */}
+    </div>
+  );
 };
