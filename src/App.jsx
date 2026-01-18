@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Plane, Users, Plus, X, Search, DollarSign, Scale, Calendar, Briefcase, Palmtree, Mountain, Gem, Coffee, Share2, Copy, Check, Info, ArrowRight, ArrowLeft, Globe, ArrowUpDown, ExternalLink, TrendingDown, Clock, MapPin } from 'lucide-react';
 import './App.css';
 import {
@@ -929,12 +929,12 @@ export default function HolidayPlanner() {
     }, 800);
   };
 
-  const addTraveler = () => {
+  const addTraveler = useCallback(() => {
     const newTravelers = [...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }];
     setTravelers(newTravelers);
     // Track traveler added
     trackTravelerModified('added', newTravelers.length);
-  };
+  }, [travelers]);
 
   const duplicateTraveler = (travelerToDuplicate) => {
     // Show modal to get name for duplicated traveler
@@ -956,11 +956,11 @@ export default function HolidayPlanner() {
     }
   };
 
-  const removeTraveler = (id) => {
+  const removeTraveler = useCallback((id) => {
     if (travelers.length > 1) {
       setShowRemoveConfirm(id);
     }
-  };
+  }, [travelers.length]);
 
   const confirmRemoveTraveler = (id) => {
     const newTravelers = travelers.filter(t => t.id !== id);
@@ -970,9 +970,9 @@ export default function HolidayPlanner() {
     trackTravelerModified('removed', newTravelers.length);
   };
 
-  const updateTraveler = (id, field, value) => {
+  const updateTraveler = useCallback((id, field, value) => {
     setTravelers(prevTravelers => prevTravelers.map(t => t.id === id ? { ...t, [field]: value } : t));
-  };
+  }, []);
 
   const handleOriginChange = (id, value) => {
     updateTraveler(id, 'origin', value);
@@ -1436,12 +1436,12 @@ export default function HolidayPlanner() {
     return filtered;
   };
 
-  const destinationsToShow = getSortedDestinations();
+  const destinationsToShow = useMemo(() => getSortedDestinations(), [availableDestinations, tripType, sortBy]);
 
   const destination = selectedDestination || customDestination;
-  const fairness = getFairnessDetails();
+  const fairness = useMemo(() => getFairnessDetails(), [showResults, selectedDestination, customDestination, flightData, travelers]);
 
-  const canProceed = travelers.every(t => t.selectedAirport) && dateFrom;
+  const canProceed = useMemo(() => travelers.every(t => t.selectedAirport) && dateFrom, [travelers, dateFrom]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-6 pb-20">
