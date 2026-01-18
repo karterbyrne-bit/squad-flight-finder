@@ -6,17 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>squad-flight-finder</title>
 
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3L99Y7WVRJ"></script>
+    <!-- Resource hints for performance -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+    <link rel="dns-prefetch" href="https://test.api.amadeus.com">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Google Analytics - loaded after content for better LCP -->
+    <script async defer src="https://www.googletagmanager.com/gtag/js?id=G-3L99Y7WVRJ"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-3L99Y7WVRJ');
     </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
