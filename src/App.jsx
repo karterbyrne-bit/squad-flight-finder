@@ -170,7 +170,7 @@ export default function HolidayPlanner() {
   const destination = selectedDestination || customDestination;
 
   // Get fairness details for FlightResults component
-  const fairnessDetails = useMemo(() => getFairnessDetails(), [getFairnessDetails]);
+  const fairnessDetails = getFairnessDetails;
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -269,7 +269,7 @@ export default function HolidayPlanner() {
     // Calculate fairness score (0-100, higher = more fair)
     const avg = validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length;
     const maxDiff = Math.max(...validPrices.map(p => Math.abs(p - avg)));
-    const fairnessScore = Math.round(Math.max(0, 100 - (maxDiff / avg * 100)));
+    const fairnessScore = Math.round(Math.max(0, 100 - (maxDiff / avg) * 100));
 
     return {
       avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
