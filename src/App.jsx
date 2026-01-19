@@ -12,16 +12,19 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plane, X } from 'lucide-react';
+import { Plane, X, Settings } from 'lucide-react';
 import './App.css';
 
 // Custom Hooks
 import { useTravelers } from './hooks/useTravelers';
 import { useAmadeusAPI } from './hooks/useAmadeusAPI';
 import { useFairness } from './hooks/useFairness';
+import { useSettings } from './hooks/useSettings';
 
 // Shared Components
 import { ConfirmModal, InputModal } from './components/shared/Modal';
+import InstallPrompt from './components/InstallPrompt';
+import SettingsPanel from './components/SettingsPanel';
 
 // Feature Components
 import { TripPlanner } from './components/TripPlanning/TripPlanner';
@@ -77,6 +80,9 @@ export default function HolidayPlanner() {
   const [debugMode, setDebugMode] = useState(false);
   const [apiCallStats, setApiCallStats] = useState({ total: 0, cacheHits: 0, byEndpoint: {} });
 
+  // Settings
+  const [showSettings, setShowSettings] = useState(false);
+
   // ============================================================================
   // CUSTOM HOOKS
   // ============================================================================
@@ -109,13 +115,30 @@ export default function HolidayPlanner() {
     customDestination
   );
 
+  const { settings, toggleAddToHomeScreen, dismissInstallPrompt, shouldShowInstallPrompt } =
+    useSettings();
+
   // ============================================================================
   // EFFECTS
   // ============================================================================
 
+  // Register service worker for PWA support
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then(registration => {
+          console.log('[PWA] Service Worker registered:', registration);
+        })
+        .catch(error => {
+          console.error('[PWA] Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   // Listen for API call updates
   useEffect(() => {
-    const handleApiCallUpdate = (event) => {
+    const handleApiCallUpdate = event => {
       setApiCallStats(event.detail);
     };
 
@@ -125,7 +148,7 @@ export default function HolidayPlanner() {
 
   // Debug mode keyboard shortcut (Ctrl+Shift+D)
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = e => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         setDebugMode(prev => !prev);
@@ -140,23 +163,22 @@ export default function HolidayPlanner() {
   // COMPUTED VALUES
   // ============================================================================
 
-  const canProceed = useMemo(() =>
-    travelers.every(t => t.selectedAirport) && dateFrom,
+  const canProceed = useMemo(
+    () => travelers.every(t => t.selectedAirport) && dateFrom,
     [travelers, dateFrom]
   );
 
   const destination = selectedDestination || customDestination;
 
-  const fairnessDetails = useMemo(() =>
-    getFairnessDetails,
-    [getFairnessDetails]
-  );
+  // Used in commented FlightResults component (TODO)
+   
+  const _fairnessDetails = useMemo(() => getFairnessDetails, [getFairnessDetails]);
 
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
 
-  const getAirportsToCheck = (traveler) => {
+  const getAirportsToCheck = traveler => {
     let airportsToCheck = traveler.airports || [];
 
     // Filter out excluded airports
@@ -181,9 +203,7 @@ export default function HolidayPlanner() {
     }
 
     // For non-hub cities, limit to 2-3 closest airports
-    return airportsToCheck
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3);
+    return airportsToCheck.sort((a, b) => a.distance - b.distance).slice(0, 3);
   };
 
   const getFlightFilters = () => {
@@ -202,15 +222,22 @@ export default function HolidayPlanner() {
   // DESTINATION SEARCH
   // ============================================================================
 
-  const calculateDestinationPrices = async (destinationCode) => {
-    const pricePromises = travelers.map(async (traveler) => {
+  const calculateDestinationPrices = async destinationCode => {
+    const pricePromises = travelers.map(async traveler => {
       const airportsToCheck = getAirportsToCheck(traveler);
       if (airportsToCheck.length === 0) return null;
 
       const filters = getFlightFilters();
 
-      const flightSearches = airportsToCheck.map(async (airport) => {
-        const flights = await searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
+      const flightSearches = airportsToCheck.map(async airport => {
+        const flights = await searchFlights(
+          airport.code,
+          destinationCode,
+          dateFrom,
+          1,
+          dateTo,
+          filters
+        );
         if (flights.length === 0) return null;
 
         const cheapest = flights.reduce((min, flight) => {
@@ -220,7 +247,7 @@ export default function HolidayPlanner() {
 
         return {
           price: parseFloat(cheapest.price.total),
-          weightedScore: calculateWeightedScore(parseFloat(cheapest.price.total), airport.distance)
+          weightedScore: calculateWeightedScore(parseFloat(cheapest.price.total), airport.distance),
         };
       });
 
@@ -245,7 +272,7 @@ export default function HolidayPlanner() {
       avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
       minPrice: Math.round(Math.min(...validPrices)),
       maxPrice: Math.round(Math.max(...validPrices)),
-      deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices))
+      deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices)),
     };
   };
 
@@ -279,9 +306,10 @@ export default function HolidayPlanner() {
         .map(([code, data]) => ({ code, ...data }));
 
       const destinationsWithPrices = await Promise.all(
-        topDestinations.map(async (dest) => {
-          const cityName = Object.entries(destinationAirportMap)
-            .find(([city, code]) => code === dest.code)?.[0];
+        topDestinations.map(async dest => {
+          const cityName = Object.entries(destinationAirportMap).find(
+            ([, code]) => code === dest.code
+          )?.[0];
           const priceMetrics = await calculateDestinationPrices(dest.code);
 
           if (!priceMetrics) return null;
@@ -291,7 +319,7 @@ export default function HolidayPlanner() {
             code: dest.code,
             count: dest.count,
             types: cityName ? getDestinationTypes(cityName) : ['city'],
-            ...priceMetrics
+            ...priceMetrics,
           };
         })
       );
@@ -310,7 +338,7 @@ export default function HolidayPlanner() {
   // FLIGHT SEARCH
   // ============================================================================
 
-  const searchFlightsForDestination = async (destinationCity) => {
+  const searchFlightsForDestination = async destinationCity => {
     setLoading(true);
     setError(null);
 
@@ -330,17 +358,24 @@ export default function HolidayPlanner() {
       const filters = getFlightFilters();
 
       // Search flights for each traveler
-      const flightPromises = travelers.map(async (traveler) => {
+      const flightPromises = travelers.map(async traveler => {
         const airportsToCheck = getAirportsToCheck(traveler);
         if (airportsToCheck.length === 0) return null;
 
-        const allFlightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
+        const allFlightSearches = airportsToCheck.map(async airport => {
+          const flights = await searchFlights(
+            airport.code,
+            destinationCode,
+            dateFrom,
+            1,
+            dateTo,
+            filters
+          );
 
           return flights.map(flight => ({
             ...flight,
             departureAirport: airport,
-            weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance)
+            weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance),
           }));
         });
 
@@ -350,12 +385,22 @@ export default function HolidayPlanner() {
         // Fallback for connecting flights if no direct flights found
         if (allFlights.length === 0 && filters.nonStop) {
           const fallbackFilters = { ...filters, nonStop: false };
-          const fallbackSearches = airportsToCheck.map(async (airport) => {
-            const flights = await searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, fallbackFilters);
+          const fallbackSearches = airportsToCheck.map(async airport => {
+            const flights = await searchFlights(
+              airport.code,
+              destinationCode,
+              dateFrom,
+              1,
+              dateTo,
+              fallbackFilters
+            );
             return flights.map(flight => ({
               ...flight,
               departureAirport: airport,
-              weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance)
+              weightedScore: calculateWeightedScore(
+                parseFloat(flight.price.total),
+                airport.distance
+              ),
             }));
           });
 
@@ -370,7 +415,7 @@ export default function HolidayPlanner() {
         return {
           travelerId: traveler.id,
           flights: sortedFlights.slice(0, 5),
-          cheapest: sortedFlights[0]
+          cheapest: sortedFlights[0],
         };
       });
 
@@ -386,11 +431,13 @@ export default function HolidayPlanner() {
       });
 
       if (foundFlights === 0) {
-        setError('No flights found for the selected date and destination. Try a different date or destination.');
+        setError(
+          'No flights found for the selected date and destination. Try a different date or destination.'
+        );
         trackSearchFailed('no_results', {
           destination: destinationCity,
           travelers: travelers.length,
-          date: dateFrom
+          date: dateFrom,
         });
       } else {
         trackResultsLoaded(destinationCity, calculateFairnessScore, foundFlights);
@@ -403,7 +450,7 @@ export default function HolidayPlanner() {
       trackSearchFailed('api_error', {
         destination: destinationCity,
         error: err.message,
-        travelers: travelers.length
+        travelers: travelers.length,
       });
     } finally {
       setLoading(false);
@@ -425,7 +472,7 @@ export default function HolidayPlanner() {
   };
 
   // Get sorted destinations
-  const getSortedDestinations = () => {
+  const destinationsToShow = useMemo(() => {
     if (availableDestinations.length === 0) return [];
 
     let filtered = [...availableDestinations];
@@ -442,9 +489,7 @@ export default function HolidayPlanner() {
     }
 
     return filtered;
-  };
-
-  const destinationsToShow = useMemo(() => getSortedDestinations(), [availableDestinations, tripType, sortBy]);
+  }, [availableDestinations, tripType, sortBy]);
 
   // ============================================================================
   // RENDER
@@ -454,10 +499,21 @@ export default function HolidayPlanner() {
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-6 pb-20">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-8">
+        <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-8 relative">
+          {/* Settings Button */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all duration-200 backdrop-blur-sm"
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5 text-white" />
+          </button>
+
           <div className="flex items-center justify-center gap-3 mb-2">
             <Plane className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-float" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Squad Flight Finder</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Squad Flight Finder
+            </h1>
           </div>
           <p className="text-white/90 text-xs sm:text-sm">Find the fairest meeting spot</p>
           {debugMode && (
@@ -571,6 +627,17 @@ export default function HolidayPlanner() {
           onChange={setDuplicateName}
           confirmText="Duplicate"
         />
+
+        {/* Settings Panel */}
+        <SettingsPanel
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          settings={settings}
+          onToggleAddToHomeScreen={toggleAddToHomeScreen}
+        />
+
+        {/* Install Prompt */}
+        <InstallPrompt enabled={shouldShowInstallPrompt()} onDismiss={dismissInstallPrompt} />
       </div>
     </div>
   );
