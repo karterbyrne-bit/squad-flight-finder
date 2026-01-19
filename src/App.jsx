@@ -494,7 +494,12 @@ export default function HolidayPlanner() {
       filtered.sort((a, b) => a.deviation - b.deviation);
     } else if (sortBy === 'minPrice') {
       filtered.sort((a, b) => a.minPrice - b.minPrice);
+    } else if (sortBy === 'fairness') {
+      // Sort by fairness score (highest first)
+      filtered.sort((a, b) => (b.fairnessScore || 0) - (a.fairnessScore || 0));
     }
+
+    console.log('🔄 Sorted destinations:', filtered.map(d => ({ city: d.city, fairnessScore: d.fairnessScore })));
 
     return filtered;
   }, [availableDestinations, tripType, sortBy]);
