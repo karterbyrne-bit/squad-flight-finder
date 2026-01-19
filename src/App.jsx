@@ -271,13 +271,17 @@ export default function HolidayPlanner() {
     const maxDiff = Math.max(...validPrices.map(p => Math.abs(p - avg)));
     const fairnessScore = Math.round(Math.max(0, 100 - (maxDiff / avg * 100)));
 
-    return {
+    const result = {
       avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
       minPrice: Math.round(Math.min(...validPrices)),
       maxPrice: Math.round(Math.max(...validPrices)),
       deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices)),
       fairnessScore: fairnessScore,
     };
+
+    console.log('🎯 Calculated destination metrics:', result);
+
+    return result;
   };
 
   const goToDestinations = async () => {
