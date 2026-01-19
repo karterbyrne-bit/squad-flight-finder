@@ -3,7 +3,18 @@ import { MapPin, Check } from 'lucide-react';
 import { TripTypeBadge, FairnessBadge } from '../shared/Badge';
 
 export const DestinationCard = ({ destination, dateTo, isSelected, onClick }) => {
-  const { city, avgPrice, minPrice, maxPrice, deviation, types } = destination;
+  const { city, avgPrice, minPrice, maxPrice, deviation, fairnessScore, types } = destination;
+
+  // Determine fairness level and color
+  const getFairnessLevel = (score) => {
+    if (score >= 90) return { level: 'Excellent', color: 'text-green-600', bg: 'bg-green-500' };
+    if (score >= 75) return { level: 'Good', color: 'text-blue-600', bg: 'bg-blue-500' };
+    if (score >= 60) return { level: 'Fair', color: 'text-yellow-600', bg: 'bg-yellow-500' };
+    if (score >= 40) return { level: 'Poor', color: 'text-orange-600', bg: 'bg-orange-500' };
+    return { level: 'Very Poor', color: 'text-red-600', bg: 'bg-red-500' };
+  };
+
+  const fairnessLevel = fairnessScore !== undefined ? getFairnessLevel(fairnessScore) : null;
 
   return (
     <button
@@ -33,6 +44,25 @@ export const DestinationCard = ({ destination, dateTo, isSelected, onClick }) =>
         <TripTypeBadge isRoundTrip={!!dateTo} />
       </div>
 
+      {/* Fairness Score - Prominent Display */}
+      {fairnessLevel && (
+        <div className={`rounded-lg p-2 mb-2 ${isSelected ? 'bg-white/80' : 'bg-gray-50'}`}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-gray-600 font-semibold uppercase">Fairness</span>
+            <div className="flex items-center gap-1">
+              <div className={`w-1.5 h-1.5 rounded-full ${fairnessLevel.bg}`}></div>
+              <span className={`text-[10px] font-semibold ${fairnessLevel.color}`}>
+                {fairnessLevel.level}
+              </span>
+            </div>
+          </div>
+          <div className={`text-2xl font-bold ${fairnessLevel.color} text-center`}>
+            {fairnessScore}
+            <span className="text-xs text-gray-500 ml-1">/100</span>
+          </div>
+        </div>
+      )}
+
       {/* Price Metrics */}
       <div className="space-y-1 mb-2">
         <div className="flex items-center justify-between text-xs">
@@ -42,12 +72,6 @@ export const DestinationCard = ({ destination, dateTo, isSelected, onClick }) =>
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-600">Range:</span>
           <span className="font-semibold text-gray-700">£{minPrice}-£{maxPrice}</span>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-600">Diff:</span>
-          <span className={`font-bold ${deviation < 50 ? 'text-green-600' : deviation < 100 ? 'text-yellow-600' : 'text-red-600'}`}>
-            £{deviation}
-          </span>
         </div>
       </div>
 
