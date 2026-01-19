@@ -1,0 +1,21 @@
+{
+  "name": "Squad Flight Finder",
+  "short_name": "Squad Flights",
+  "description": "Find the best flight deals for your group trips",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9333ea",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "utilities"],
+  "screenshots": [],
+  "shortcuts": []
+}
