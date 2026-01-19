@@ -29,8 +29,7 @@ import SettingsPanel from './components/SettingsPanel';
 // Feature Components
 import { TripPlanner } from './components/TripPlanning/TripPlanner';
 import { DestinationList } from './components/DestinationSelection/DestinationList';
-// TODO: Import FlightResults component when created
-// import { FlightResults } from './components/FlightResults/FlightResults';
+import FlightResults from './components/FlightResults/FlightResults';
 
 // Data
 import { MAJOR_HUB_CITIES, destinationAirportMap, getDestinationTypes } from './data/constants';
@@ -170,9 +169,8 @@ export default function HolidayPlanner() {
 
   const destination = selectedDestination || customDestination;
 
-  // Used in commented FlightResults component (TODO)
-   
-  const _fairnessDetails = useMemo(() => getFairnessDetails, [getFairnessDetails]);
+  // Get fairness details for FlightResults component
+  const fairnessDetails = useMemo(() => getFairnessDetails(), [getFairnessDetails]);
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -588,19 +586,18 @@ export default function HolidayPlanner() {
 
         {/* Step 2: Flight Results */}
         {step === 2 && showResults && (
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Flight Results</h2>
-            <p>TODO: Create FlightResults component to display results</p>
-            {/* TODO: Replace with FlightResults component */}
-            {/* <FlightResults
-              flightData={flightData}
-              travelers={travelers}
-              destination={destination}
-              dateTo={dateTo}
-              fairnessDetails={fairnessDetails}
-              onBack={() => setShowResults(false)}
-            /> */}
-          </div>
+          <FlightResults
+            flightData={flightData}
+            travelers={travelers}
+            destination={destination}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            fairnessDetails={fairnessDetails}
+            onBack={() => {
+              setStep(1);
+              setShowResults(false);
+            }}
+          />
         )}
 
         {/* Modals */}
