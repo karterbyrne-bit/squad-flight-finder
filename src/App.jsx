@@ -21,6 +21,9 @@ import { useAmadeusAPI } from './hooks/useAmadeusAPI';
 import { useFairness } from './hooks/useFairness';
 import { useSettings } from './hooks/useSettings';
 
+// Utils
+import { apiRequestQueue } from './utils/rateLimiter';
+
 // Shared Components
 import { ConfirmModal, InputModal } from './components/shared/Modal';
 import InstallPrompt from './components/InstallPrompt';
@@ -285,53 +288,128 @@ export default function HolidayPlanner() {
 
     setStep(2);
     setLoadingDestinations(true);
+    setError(null); // Clear any previous errors
 
     try {
-      const allAirports = travelers.flatMap(traveler => getAirportsToCheck(traveler));
-      const uniqueAirports = [...new Set(allAirports.map(a => a.code))];
+      // Get a curated list of popular destinations from our constants
+      const curatedDestinations = Object.entries(destinationAirportMap).map(([city, code]) => ({
+        city,
+        code,
+        types: getDestinationTypes(city),
+      }));
 
-      const destinationPromises = uniqueAirports.map(airport => searchDestinations(airport));
-      const results = await Promise.all(destinationPromises);
+      // Try to fetch API-based destinations, but don't let it block us
+      let apiDestinations = [];
+      try {
+        const allAirports = travelers.flatMap(traveler => getAirportsToCheck(traveler));
+        const uniqueAirports = [...new Set(allAirports.map(a => a.code))];
 
-      const allDestinations = results.flat();
-      const destinationMap = new Map();
+        // Limit to first 3 airports to avoid too many API calls
+        const airportsToCheck = uniqueAirports.slice(0, 3);
+        console.log(
+          `🌍 Fetching destinations from ${airportsToCheck.length} airports:`,
+          airportsToCheck
+        );
 
-      allDestinations.forEach(dest => {
-        const iataCode = dest.destination;
-        if (!destinationMap.has(iataCode)) {
-          destinationMap.set(iataCode, { code: iataCode, count: 1 });
-        } else {
-          destinationMap.get(iataCode).count++;
-        }
-      });
+        const destinationPromises = airportsToCheck.map(airport =>
+          searchDestinations(airport).catch(err => {
+            console.warn(`Failed to fetch destinations for ${airport}:`, err);
+            return [];
+          })
+        );
 
-      const topDestinations = Array.from(destinationMap.entries())
-        .sort((a, b) => b[1].count - a[1].count)
-        .map(([code, data]) => ({ code, ...data }));
+        const results = await Promise.all(destinationPromises);
+        const allDestinations = results.flat();
 
-      const destinationsWithPrices = await Promise.all(
-        topDestinations.map(async dest => {
-          const cityName = Object.entries(destinationAirportMap).find(
-            ([, code]) => code === dest.code
-          )?.[0];
-          const priceMetrics = await calculateDestinationPrices(dest.code);
+        // Map API destinations to city names
+        apiDestinations = allDestinations
+          .map(dest => {
+            const cityName = Object.entries(destinationAirportMap).find(
+              ([, code]) => code === dest.destination
+            )?.[0];
 
-          if (!priceMetrics) return null;
+            if (!cityName) return null;
 
-          return {
-            city: cityName || dest.code,
-            code: dest.code,
-            count: dest.count,
-            types: cityName ? getDestinationTypes(cityName) : ['city'],
-            ...priceMetrics,
-          };
+            return {
+              city: cityName,
+              code: dest.destination,
+              types: getDestinationTypes(cityName),
+            };
+          })
+          .filter(d => d !== null);
+
+        console.log(`✅ Found ${apiDestinations.length} destinations from API`);
+      } catch (err) {
+        console.warn('API destination search failed, using curated list:', err);
+      }
+
+      // Merge API destinations with curated list, preferring API results
+      const apiCodes = new Set(apiDestinations.map(d => d.code));
+      const mergedDestinations = [
+        ...apiDestinations,
+        ...curatedDestinations.filter(d => !apiCodes.has(d.code)),
+      ];
+
+      // Limit to top 25 destinations to avoid too many price checks
+      const destinationsToPrice = mergedDestinations.slice(0, 25);
+      console.log(`💰 Calculating prices for ${destinationsToPrice.length} destinations...`);
+
+      // Calculate prices for destinations using request queue for controlled concurrency
+      const destinationsWithPrices = [];
+      let processed = 0;
+
+      // Use Promise.allSettled with request queue to process in parallel but controlled
+      const pricingPromises = destinationsToPrice.map(dest =>
+        apiRequestQueue.add(async () => {
+          try {
+            const priceMetrics = await calculateDestinationPrices(dest.code);
+            processed++;
+
+            if (priceMetrics) {
+              console.log(
+                `✓ ${processed}/${destinationsToPrice.length}: ${dest.city} - £${priceMetrics.avgPrice}`
+              );
+              return {
+                ...dest,
+                ...priceMetrics,
+              };
+            } else {
+              console.log(
+                `✗ ${processed}/${destinationsToPrice.length}: ${dest.city} - no flights found`
+              );
+              return null;
+            }
+          } catch (err) {
+            processed++;
+            console.warn(`Failed to price ${dest.city}:`, err);
+            return null;
+          }
         })
       );
 
-      const validDestinations = destinationsWithPrices.filter(d => d !== null);
-      setAvailableDestinations(validDestinations);
+      const pricingResults = await Promise.allSettled(pricingPromises);
+
+      pricingResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+          destinationsWithPrices.push(result.value);
+        }
+      });
+
+      console.log(`📊 Completed: ${destinationsWithPrices.length} destinations with prices`);
+
+      if (destinationsWithPrices.length === 0) {
+        // Fallback: show curated list without prices
+        console.warn('No destinations with prices found, showing curated list');
+        setError(
+          'Unable to fetch destination prices. Please try entering a custom destination below.'
+        );
+        setAvailableDestinations([]);
+      } else {
+        setAvailableDestinations(destinationsWithPrices);
+      }
     } catch (err) {
       console.error('Failed to fetch destinations:', err);
+      setError('Unable to load destinations. Please try entering a custom destination below.');
       setAvailableDestinations([]);
     } finally {
       setLoadingDestinations(false);
@@ -468,7 +546,12 @@ export default function HolidayPlanner() {
   };
 
   const searchTrips = () => {
-    console.log('🔍 Search initiated:', { destination, travelers: travelers.length, step, showResults });
+    console.log('🔍 Search initiated:', {
+      destination,
+      travelers: travelers.length,
+      step,
+      showResults,
+    });
 
     if (!destination) {
       console.error('❌ No destination selected');
@@ -534,7 +617,9 @@ export default function HolidayPlanner() {
               Squad Flight Finder
             </h1>
           </div>
-          <p className="text-white/90 text-xs sm:text-sm">Compare prices with Fairness for your squad</p>
+          <p className="text-white/90 text-xs sm:text-sm">
+            Compare prices with Fairness for your squad
+          </p>
           {debugMode && (
             <div className="mt-3 inline-block bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">
               🔧 Debug Mode Active (Ctrl+Shift+D to toggle)
@@ -587,23 +672,23 @@ export default function HolidayPlanner() {
             {console.log('🗺️ Rendering DestinationList', { step, showResults })}
             <DestinationList
               destinations={destinationsToShow}
-            loading={loadingDestinations}
-            dateTo={dateTo}
-            selectedDestination={selectedDestination}
-            onSelectDestination={setSelectedDestination}
-            customDestination={customDestination}
-            onCustomDestinationChange={setCustomDestination}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            tripType={tripType}
-            onTripTypeChange={setTripType}
-            onSearchFlights={searchTrips}
-            onBack={() => {
-              setStep(1);
-              setShowResults(false);
-              setFlightData({});
-            }}
-            isSearching={loading}
+              loading={loadingDestinations}
+              dateTo={dateTo}
+              selectedDestination={selectedDestination}
+              onSelectDestination={setSelectedDestination}
+              customDestination={customDestination}
+              onCustomDestinationChange={setCustomDestination}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              tripType={tripType}
+              onTripTypeChange={setTripType}
+              onSearchFlights={searchTrips}
+              onBack={() => {
+                setStep(1);
+                setShowResults(false);
+                setFlightData({});
+              }}
+              isSearching={loading}
             />
           </>
         )}
@@ -611,7 +696,11 @@ export default function HolidayPlanner() {
         {/* Step 2: Flight Results */}
         {step === 2 && showResults && (
           <>
-            {console.log('🎨 Rendering FlightResults component', { step, showResults, destination })}
+            {console.log('🎨 Rendering FlightResults component', {
+              step,
+              showResults,
+              destination,
+            })}
             <FlightResults
               flightData={flightData}
               travelers={travelers}
