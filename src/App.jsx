@@ -46,6 +46,24 @@ import {
   trackPopularDestination,
 } from './utils/analytics';
 
+// ============================================================================
+// ENVIRONMENT VARIABLE VALIDATION
+// Fail fast if critical configuration is missing
+// ============================================================================
+const requiredEnvVars = [
+  'VITE_AMADEUS_API_KEY',
+  'VITE_AMADEUS_API_SECRET',
+];
+
+requiredEnvVars.forEach((varName) => {
+  if (!import.meta.env[varName]) {
+    throw new Error(
+      `Missing required environment variable: ${varName}. ` +
+      `Please check your .env file. See .env.example for reference.`
+    );
+  }
+});
+
 export default function HolidayPlanner() {
   // ============================================================================
   // STATE MANAGEMENT
