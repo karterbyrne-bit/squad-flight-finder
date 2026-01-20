@@ -16,6 +16,15 @@ export default function FlightResults({
   fairnessDetails,
   onBack,
 }) {
+  console.log('🎯 FlightResults rendered:', {
+    flightData,
+    travelers: travelers?.length,
+    destination,
+    dateFrom,
+    dateTo,
+    fairnessDetails
+  });
+
   // Get travelers with flight data
   const travelersWithFlights = useMemo(() => {
     return travelers
@@ -32,6 +41,7 @@ export default function FlightResults({
   }, [travelers, flightData]);
 
   const hasResults = travelersWithFlights.length > 0;
+  console.log('📈 Flight results analysis:', { travelersWithFlights: travelersWithFlights.length, hasResults });
 
   if (!hasResults) {
     return (
