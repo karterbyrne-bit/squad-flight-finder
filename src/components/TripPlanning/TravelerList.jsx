@@ -25,7 +25,7 @@ export const TravelerList = ({
             className="px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Person
+            Add Traveler
           </button>
         )}
       </div>

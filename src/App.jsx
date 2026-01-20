@@ -170,7 +170,7 @@ export default function HolidayPlanner() {
   const destination = selectedDestination || customDestination;
 
   // Get fairness details for FlightResults component
-  const fairnessDetails = useMemo(() => getFairnessDetails(), [getFairnessDetails]);
+  const fairnessDetails = getFairnessDetails;
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -269,7 +269,7 @@ export default function HolidayPlanner() {
     // Calculate fairness score (0-100, higher = more fair)
     const avg = validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length;
     const maxDiff = Math.max(...validPrices.map(p => Math.abs(p - avg)));
-    const fairnessScore = Math.round(Math.max(0, 100 - (maxDiff / avg * 100)));
+    const fairnessScore = Math.round(Math.max(0, 100 - (maxDiff / avg) * 100));
 
     return {
       avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
@@ -519,7 +519,7 @@ export default function HolidayPlanner() {
               Squad Flight Finder
             </h1>
           </div>
-          <p className="text-white/90 text-xs sm:text-sm">Find the fairest meeting spot</p>
+          <p className="text-white/90 text-xs sm:text-sm">Compare prices with Fairness for your squad</p>
           {debugMode && (
             <div className="mt-3 inline-block bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">
               🔧 Debug Mode Active (Ctrl+Shift+D to toggle)
