@@ -6,9 +6,18 @@ import BookingLinks from './BookingLinks';
  * FlightCard Component
  * Displays flight options for a single traveler
  */
-export default function FlightCard({ traveler, flightData, destination, colorIndex }) {
+export default function FlightCard({
+  traveler,
+  flightData,
+  destination,
+  colorIndex,
+  compact = false,
+}) {
   const [expandedFlight, setExpandedFlight] = useState(null);
   const { flights, cheapest } = flightData;
+
+  // In compact mode, only show the cheapest/selected flight
+  const displayFlights = compact ? [cheapest] : flights;
 
   // Traveler color scheme
   const colors = [
@@ -225,16 +234,18 @@ export default function FlightCard({ traveler, flightData, destination, colorInd
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-6">
+    <div className={`bg-white rounded-2xl shadow-xl ${compact ? 'p-4' : 'p-6'}`}>
       {/* Traveler Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`px-4 py-2 rounded-lg border-2 font-semibold ${colorClass}`}>
             {traveler.name || `From ${traveler.origin}`}
           </div>
-          <div className="text-sm text-gray-600">
-            {flights.length} option{flights.length !== 1 ? 's' : ''} found
-          </div>
+          {!compact && (
+            <div className="text-sm text-gray-600">
+              {flights.length} option{flights.length !== 1 ? 's' : ''} found
+            </div>
+          )}
         </div>
         <div className="text-sm text-gray-500">
           From {traveler.selectedAirport?.name || traveler.origin}
@@ -243,10 +254,12 @@ export default function FlightCard({ traveler, flightData, destination, colorInd
 
       {/* Flight Options */}
       <div className="space-y-3">
-        {flights.slice(0, 5).map((flight, index) => renderFlight(flight, index))}
+        {displayFlights
+          .slice(0, compact ? 1 : 5)
+          .map((flight, index) => renderFlight(flight, index))}
       </div>
 
-      {flights.length > 5 && (
+      {!compact && flights.length > 5 && (
         <div className="mt-4 text-center text-sm text-gray-500">
           Showing top 5 of {flights.length} options
         </div>
