@@ -5,6 +5,8 @@ import { TripTypeBadge, FairnessBadge } from '../shared/Badge';
 export const DestinationCard = ({ destination, dateTo, isSelected, onClick }) => {
   const { city, avgPrice, minPrice, maxPrice, deviation, fairnessScore, types } = destination;
 
+  console.log(`🏙️ DestinationCard for ${city}:`, { fairnessScore, destination });
+
   // Determine fairness level and color
   const getFairnessLevel = (score) => {
     if (score >= 90) return { level: 'Excellent', color: 'text-green-600', bg: 'bg-green-500' };
@@ -15,6 +17,8 @@ export const DestinationCard = ({ destination, dateTo, isSelected, onClick }) =>
   };
 
   const fairnessLevel = fairnessScore !== undefined ? getFairnessLevel(fairnessScore) : null;
+
+  console.log(`   fairnessLevel for ${city}:`, fairnessLevel);
 
   return (
     <button

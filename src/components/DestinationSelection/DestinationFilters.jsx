@@ -9,10 +9,10 @@ const sortOptions = [
     description: 'Average price across all travelers'
   },
   {
-    id: 'deviation',
+    id: 'fairness',
     label: 'Fairness',
     Icon: Scale,
-    description: 'Most balanced costs - everyone pays similar amounts'
+    description: 'Best fairness score - most balanced costs across group'
   },
   {
     id: 'minPrice',
