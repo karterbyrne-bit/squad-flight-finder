@@ -1,7 +1,25 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { DollarSign } from 'lucide-react';
 
 export const BudgetSelector = ({ maxBudget, onChange }) => {
+  const sliderRef = useRef(null);
+
+  // Handle native input events (for tests)
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const handleNativeInput = (e) => {
+      const value = parseInt(e.target.value);
+      if (!isNaN(value)) {
+        onChange(value);
+      }
+    };
+
+    slider.addEventListener('input', handleNativeInput);
+    return () => slider.removeEventListener('input', handleNativeInput);
+  }, [onChange]);
+
   return (
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
@@ -24,6 +42,7 @@ export const BudgetSelector = ({ maxBudget, onChange }) => {
           />
         </div>
         <input
+          ref={sliderRef}
           type="range"
           min="30"
           max="500"

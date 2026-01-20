@@ -19,7 +19,10 @@ export const TravelerInput = ({
     >
       {/* Card Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-xs`}>
+        <div
+          className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-xs`}
+          style={{ backgroundColor: `hsl(${index * 60}, 70%, 55%)` }}
+        >
           {traveler.name || `Person ${index + 1}`}
         </div>
         <div className="flex gap-2">
