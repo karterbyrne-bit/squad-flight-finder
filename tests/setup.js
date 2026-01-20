@@ -11,8 +11,8 @@ afterEach(() => {
 
 // Mock environment variables
 beforeEach(() => {
-  vi.stubEnv('VITE_AMADEUS_API_KEY', 'test_api_key')
-  vi.stubEnv('VITE_AMADEUS_API_SECRET', 'test_api_secret')
+  // Set DEV mode to use local API endpoint in tests
+  vi.stubEnv('DEV', true)
 })
 
 // Mock fetch globally
