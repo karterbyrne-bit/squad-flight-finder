@@ -343,6 +343,7 @@ export default function HolidayPlanner() {
   // ============================================================================
 
   const searchFlightsForDestination = async destinationCity => {
+    console.log('🛫 searchFlightsForDestination called:', destinationCity);
     setLoading(true);
     setError(null);
 
@@ -436,7 +437,7 @@ export default function HolidayPlanner() {
 
       if (foundFlights === 0) {
         setError(
-          'No flights found for the selected date and destination. Try a different date or destination.'
+          'No flights found for the selected date and destination. Try adjusting your dates or filters.'
         );
         trackSearchFailed('no_results', {
           destination: destinationCity,
@@ -447,21 +448,34 @@ export default function HolidayPlanner() {
         trackResultsLoaded(destinationCity, calculateFairnessScore, foundFlights);
       }
 
+      console.log('✅ Flight search complete:', { foundFlights, totalTravelers: travelers.length });
       setFlightData(flightMap);
       setShowResults(true);
+      console.log('📊 State updated: showResults = true, step =', step);
     } catch (err) {
-      setError(err.message);
+      console.error('Flight search error:', err);
+      setError(err.message || 'An error occurred while searching for flights. Please try again.');
       trackSearchFailed('api_error', {
         destination: destinationCity,
         error: err.message,
         travelers: travelers.length,
       });
+      // Still show results page even on error so user can navigate back properly
+      setShowResults(true);
     } finally {
       setLoading(false);
     }
   };
 
   const searchTrips = () => {
+    console.log('🔍 Search initiated:', { destination, travelers: travelers.length, step, showResults });
+
+    if (!destination) {
+      console.error('❌ No destination selected');
+      setError('Please select a destination before searching');
+      return;
+    }
+
     if (destination) {
       const uniqueCities = new Set(travelers.map(t => t.origin).filter(Boolean));
       trackSearchInitiated(travelers.length, uniqueCities.size);
@@ -471,6 +485,7 @@ export default function HolidayPlanner() {
       });
       trackPopularDestination(destination);
 
+      console.log('✈️ Starting flight search for:', destination);
       searchFlightsForDestination(destination);
     }
   };
@@ -568,8 +583,10 @@ export default function HolidayPlanner() {
 
         {/* Step 2: Destination Selection */}
         {step === 2 && !showResults && (
-          <DestinationList
-            destinations={destinationsToShow}
+          <>
+            {console.log('🗺️ Rendering DestinationList', { step, showResults })}
+            <DestinationList
+              destinations={destinationsToShow}
             loading={loadingDestinations}
             dateTo={dateTo}
             selectedDestination={selectedDestination}
@@ -587,23 +604,27 @@ export default function HolidayPlanner() {
               setFlightData({});
             }}
             isSearching={loading}
-          />
+            />
+          </>
         )}
 
         {/* Step 2: Flight Results */}
         {step === 2 && showResults && (
-          <FlightResults
-            flightData={flightData}
-            travelers={travelers}
-            destination={destination}
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            fairnessDetails={fairnessDetails}
-            onBack={() => {
-              setStep(1);
-              setShowResults(false);
-            }}
-          />
+          <>
+            {console.log('🎨 Rendering FlightResults component', { step, showResults, destination })}
+            <FlightResults
+              flightData={flightData}
+              travelers={travelers}
+              destination={destination}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              fairnessDetails={fairnessDetails}
+              onBack={() => {
+                setStep(1);
+                setShowResults(false);
+              }}
+            />
+          </>
         )}
 
         {/* Modals */}
