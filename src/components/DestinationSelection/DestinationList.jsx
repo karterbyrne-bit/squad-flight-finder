@@ -19,7 +19,7 @@ export const DestinationList = ({
   onTripTypeChange,
   onSearchFlights,
   onBack,
-  isSearching
+  isSearching,
 }) => {
   const [showAnywhere, setShowAnywhere] = useState(false);
   const hasSelectedDest = selectedDestination || customDestination;
@@ -57,9 +57,12 @@ export const DestinationList = ({
           </div>
           <p className="text-gray-600">Ranked by price - find the best deal for your squad</p>
           {loading && (
-            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-purple-600">
+            <div className="mt-4 flex flex-col items-center justify-center gap-3 text-sm text-purple-600">
               <LoadingSpinner size="sm" color="purple" />
-              Calculating prices for all destinations...
+              <div className="text-center">
+                <p className="font-semibold">Finding the best destinations for your squad...</p>
+                <p className="text-xs text-gray-500 mt-1">This may take a minute</p>
+              </div>
             </div>
           )}
           {!loading && destinations.length > 0 && tripType !== 'all' && (
@@ -91,7 +94,9 @@ export const DestinationList = ({
                   : 'border-gray-300 bg-gradient-to-r from-purple-50 to-pink-50 hover:border-purple-300'
               }`}
             >
-              <Globe className={`w-5 h-5 ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`} />
+              <Globe
+                className={`w-5 h-5 ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}
+              />
               <span className={`font-bold ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}>
                 {showAnywhere ? 'Showing All Destinations' : 'Show All Destinations (Anywhere)'}
               </span>
@@ -102,7 +107,7 @@ export const DestinationList = ({
         {/* Destination Cards Grid */}
         {!loading && destinations.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-            {destinations.slice(0, showAnywhere ? destinations.length : 12).map((destination) => (
+            {destinations.slice(0, showAnywhere ? destinations.length : 12).map(destination => (
               <DestinationCard
                 key={destination.code}
                 destination={destination}
@@ -135,7 +140,7 @@ export const DestinationList = ({
             type="text"
             placeholder="e.g., Reykjavik, Athens, Venice..."
             value={customDestination}
-            onChange={(e) => {
+            onChange={e => {
               onCustomDestinationChange(e.target.value);
               onSelectDestination('');
             }}
