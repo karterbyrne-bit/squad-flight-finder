@@ -104,9 +104,14 @@ export const TripPlanner = ({
         </Button>
 
         {!canProceed && (
-          <p className="text-sm text-gray-600 text-center">
-            Please fill in all required fields to continue
-          </p>
+          <div className="text-sm text-center space-y-1">
+            <p className="text-gray-600">Please complete:</p>
+            <ul className="text-gray-500 text-xs space-y-1">
+              {!dateFrom && <li>• Select a departure date</li>}
+              {travelers.some(t => !t.selectedAirport) && <li>• Set origin city for all travelers</li>}
+              {(Array.isArray(tripType) ? tripType.length === 0 : (!tripType || tripType === 'all')) && <li className="text-purple-600 font-semibold">• Choose at least one trip type (reduces search time by 70%)</li>}
+            </ul>
+          </div>
         )}
       </div>
     </div>
