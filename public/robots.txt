@@ -1,0 +1,11 @@
+# Squad Flight Finder - robots.txt
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+
+# Sitemap location (update with your actual domain when deployed)
+# Sitemap: https://yoursite.com/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

@@ -46,6 +46,24 @@ import {
   trackPopularDestination,
 } from './utils/analytics';
 
+// ============================================================================
+// ENVIRONMENT VARIABLE VALIDATION
+// Fail fast if critical configuration is missing
+// ============================================================================
+const requiredEnvVars = [
+  'VITE_AMADEUS_API_KEY',
+  'VITE_AMADEUS_API_SECRET',
+];
+
+requiredEnvVars.forEach((varName) => {
+  if (!import.meta.env[varName]) {
+    throw new Error(
+      `Missing required environment variable: ${varName}. ` +
+      `Please check your .env file. See .env.example for reference.`
+    );
+  }
+});
+
 export default function HolidayPlanner() {
   // ============================================================================
   // STATE MANAGEMENT
@@ -56,7 +74,7 @@ export default function HolidayPlanner() {
   const [showResults, setShowResults] = useState(false);
 
   // Trip Configuration
-  const [tripType, setTripType] = useState('all');
+  const [tripType, setTripType] = useState([]); // Array for multi-select (empty = not selected, required)
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [maxBudget, setMaxBudget] = useState(150);
@@ -165,10 +183,10 @@ export default function HolidayPlanner() {
   // COMPUTED VALUES
   // ============================================================================
 
-  const canProceed = useMemo(
-    () => travelers.every(t => t.selectedAirport) && dateFrom,
-    [travelers, dateFrom]
-  );
+  const canProceed = useMemo(() => {
+    const hasTripType = Array.isArray(tripType) ? tripType.length > 0 : (tripType && tripType !== 'all');
+    return travelers.every(t => t.selectedAirport) && dateFrom && hasTripType;
+  }, [travelers, dateFrom, tripType]);
 
   const destination = selectedDestination || customDestination;
 
@@ -349,13 +367,23 @@ export default function HolidayPlanner() {
 
       // Merge API destinations with curated list, preferring API results
       const apiCodes = new Set(apiDestinations.map(d => d.code));
-      const mergedDestinations = [
+      let mergedDestinations = [
         ...apiDestinations,
         ...curatedDestinations.filter(d => !apiCodes.has(d.code)),
       ];
 
-      // Limit to top 25 destinations to avoid too many price checks
-      const destinationsToPrice = mergedDestinations.slice(0, 25);
+      // IMPORTANT: Filter by trip type BEFORE pricing to reduce API calls
+      // Trip type is now required and can be multiple types
+      const selectedTypes = Array.isArray(tripType) ? tripType : (tripType ? [tripType] : []);
+      if (selectedTypes.length > 0 && !selectedTypes.includes('all')) {
+        mergedDestinations = mergedDestinations.filter(d =>
+          d.types && d.types.some(type => selectedTypes.includes(type))
+        );
+        console.log(`🎯 Filtered to ${mergedDestinations.length} destinations matching: ${selectedTypes.join(', ')}`);
+      }
+
+      // Limit to top 15 destinations after filtering to avoid too many price checks
+      const destinationsToPrice = mergedDestinations.slice(0, 15);
       console.log(`💰 Calculating prices for ${destinationsToPrice.length} destinations...`);
 
       // Calculate prices for destinations using request queue for controlled concurrency
@@ -581,26 +609,25 @@ export default function HolidayPlanner() {
   const destinationsToShow = useMemo(() => {
     if (availableDestinations.length === 0) return [];
 
-    let filtered = [...availableDestinations];
-    if (tripType !== 'all') {
-      filtered = filtered.filter(d => d.types && d.types.includes(tripType));
-    }
+    // Destinations are already filtered by tripType in goToDestinations
+    // So we just need to apply sorting here
+    let sorted = [...availableDestinations];
 
     if (sortBy === 'avgPrice') {
-      filtered.sort((a, b) => a.avgPrice - b.avgPrice);
+      sorted.sort((a, b) => a.avgPrice - b.avgPrice);
     } else if (sortBy === 'deviation') {
-      filtered.sort((a, b) => a.deviation - b.deviation);
+      sorted.sort((a, b) => a.deviation - b.deviation);
     } else if (sortBy === 'minPrice') {
-      filtered.sort((a, b) => a.minPrice - b.minPrice);
+      sorted.sort((a, b) => a.minPrice - b.minPrice);
     } else if (sortBy === 'fairness') {
       // Sort by fairness score (highest first)
-      filtered.sort((a, b) => (b.fairnessScore || 0) - (a.fairnessScore || 0));
+      sorted.sort((a, b) => (b.fairnessScore || 0) - (a.fairnessScore || 0));
     }
 
-    console.log('🔄 Sorted destinations:', filtered.map(d => ({ city: d.city, fairnessScore: d.fairnessScore })));
+    console.log('🔄 Sorted destinations:', sorted.map(d => ({ city: d.city, fairnessScore: d.fairnessScore })));
 
-    return filtered;
-  }, [availableDestinations, tripType, sortBy]);
+    return sorted;
+  }, [availableDestinations, sortBy]);
 
   // ============================================================================
   // RENDER

@@ -41,11 +41,13 @@ npm install
 cp .env.example .env
 # Edit .env and add your Amadeus API credentials
 
-# Start development server
-npm run dev
+# Start development server with Netlify Functions
+npm run dev:netlify
 ```
 
-Visit `http://localhost:5173` to see the app.
+Visit `http://localhost:8888` to see the app.
+
+**Note:** Use `npm run dev:netlify` instead of `npm run dev` to run the backend API alongside the frontend.
 
 ### Getting Amadeus API Keys
 
@@ -109,17 +111,33 @@ Generate a shareable link for your group and book via partner links.
 
 ### Tech Stack
 - **Frontend**: React 19.2, Tailwind CSS, Vite
+- **Backend**: Netlify Functions (serverless)
 - **API**: Amadeus Flight Search API
 - **Testing**: Vitest, React Testing Library, Playwright
-- **Deployment**: [Vercel/Netlify - TBD]
+- **Deployment**: Netlify
+
+### Security Architecture
+```
+Browser → Netlify Functions → Amadeus API
+```
+
+API credentials are **never** exposed to the browser. All Amadeus API calls go through secure backend functions. See [SECURITY.md](./SECURITY.md) for details.
 
 ### Project Structure
 ```
 squad-flight-finder/
 ├── src/
+│   ├── hooks/            # Custom React hooks
+│   ├── utils/            # Utility functions
+│   ├── components/       # React components
 │   ├── App.jsx           # Main application component
-│   ├── App.css           # Styles
 │   └── main.jsx          # Entry point
+├── netlify/
+│   └── functions/        # Backend API (serverless)
+│       ├── search-airports.js
+│       ├── search-flights.js
+│       ├── search-destinations.js
+│       └── utils/amadeus.js
 ├── tests/
 │   ├── 01-core-flight-search.test.jsx
 │   ├── 02-filtering-sorting.test.jsx
@@ -127,11 +145,12 @@ squad-flight-finder/
 │   ├── 04-error-handling.test.jsx
 │   └── utils/            # Test helpers and mocks
 ├── .env                  # Environment variables (create from .env.example)
+├── netlify.toml          # Netlify configuration
 ├── package.json
 └── vite.config.js
 ```
 
-**Note:** This is the current structure. We're planning a major refactoring to extract components and services. See [Architecture Roadmap](./PROJECT_ROADMAP.md#phase-2-architecture-refactoring).
+**Note:** We're planning a major refactoring to extract more components and services. See [Architecture Roadmap](./PROJECT_ROADMAP.md#phase-2-architecture-refactoring).
 
 ---
 

@@ -7,12 +7,14 @@
  * Sanitizes user input by removing potentially dangerous characters
  * @param {string} input - The input to sanitize
  * @returns {string} - Sanitized input
+ *
+ * Note: We don't trim() here to preserve spaces during real-time typing.
+ * This prevents "John Doe" from becoming "JohnDoe" when typed character-by-character.
  */
 export const sanitizeInput = input => {
   if (typeof input !== 'string') return '';
 
   return input
-    .trim()
     .replace(/[<>]/g, '') // Remove angle brackets to prevent HTML injection
     .replace(/javascript:/gi, '') // Remove javascript: protocol
     .replace(/on\w+=/gi, ''); // Remove event handlers like onclick=

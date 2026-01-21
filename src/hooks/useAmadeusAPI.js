@@ -1,48 +1,20 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useCache, devLog, devError } from './useCache';
 import { retryApiCall } from '../utils/retry';
 import { apiRateLimiter } from '../utils/rateLimiter';
 
 /**
  * Custom hook for Amadeus API integration
- * Handles authentication, caching, retry logic, and rate limiting
+ * Now calls our secure backend API instead of Amadeus directly
+ * Handles caching, retry logic, and rate limiting
  */
 export const useAmadeusAPI = () => {
   const { cache, tracker } = useCache();
 
-  // Token management state (shared across all hook instances)
-  const tokenManager = useMemo(() => ({
-    accessToken: null,
-    tokenExpiry: null,
-
-    async getAccessToken() {
-      if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
-        return this.accessToken;
-      }
-
-      const response = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: import.meta.env.VITE_AMADEUS_API_KEY,
-          client_secret: import.meta.env.VITE_AMADEUS_API_SECRET,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error_description || 'Authentication failed');
-      }
-
-      this.accessToken = data.access_token;
-      this.tokenExpiry = Date.now() + (data.expires_in * 1000);
-      return this.accessToken;
-    }
-  }), []);
+  // Determine API base URL based on environment
+  const API_BASE = import.meta.env.DEV
+    ? 'http://localhost:8888/api'  // Netlify Dev local server
+    : '/api';  // Production (proxied by Netlify)
 
   /**
    * Search for airports by city name
@@ -59,14 +31,9 @@ export const useAmadeusAPI = () => {
 
       tracker.trackCall('airports');
 
-      const token = await tokenManager.getAccessToken();
+      // Call our backend API (which securely calls Amadeus)
       const response = await fetch(
-        `https://test.api.amadeus.com/v1/reference-data/locations?subType=AIRPORT,CITY&keyword=${encodeURIComponent(cityName)}&page[limit]=5`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
+        `${API_BASE}/search-airports?cityName=${encodeURIComponent(cityName)}`
       );
 
       if (!response.ok) {
@@ -85,7 +52,7 @@ export const useAmadeusAPI = () => {
       maxRetries: 3,
       initialDelay: 1000
     });
-  }, [cache, tracker, tokenManager]);
+  }, [cache, tracker, API_BASE]);
 
   /**
    * Search for flights between origin and destination
@@ -102,35 +69,26 @@ export const useAmadeusAPI = () => {
 
       tracker.trackCall('flights');
 
-      const token = await tokenManager.getAccessToken();
-      let url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&adults=${adults}&max=5`;
-
-      // Add returnDate for round-trip searches
-      if (returnDate) {
-        url += `&returnDate=${returnDate}`;
-      }
-
-      // Add filter parameters
-      if (filters.nonStop) {
-        url += '&nonStop=true';
-      }
-
-      if (filters.maxStops !== undefined && filters.maxStops !== null) {
-        // maxStops filter: 0 = direct only, 1 = max 1 stop, 2 = max 2 stops
-        if (filters.maxStops === 0) {
-          url += '&nonStop=true';
-        }
-        // Note: Amadeus API doesn't have a native maxStops parameter,
-        // so we'll filter results after fetching for maxStops > 0
-      }
-
-      devLog('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way', url });
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      // Build query parameters
+      const params = new URLSearchParams({
+        origin,
+        destination,
+        departureDate,
+        adults: String(adults),
       });
+
+      if (returnDate) {
+        params.append('returnDate', returnDate);
+      }
+
+      if (filters.nonStop || filters.maxStops === 0) {
+        params.append('nonStop', 'true');
+      }
+
+      devLog('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way' });
+
+      // Call our backend API (which securely calls Amadeus)
+      const response = await fetch(`${API_BASE}/search-flights?${params}`);
 
       if (!response.ok) {
         devError('❌ API returned error status:', response.status, response.statusText);
@@ -173,7 +131,7 @@ export const useAmadeusAPI = () => {
       maxRetries: 3,
       initialDelay: 2000
     });
-  }, [cache, tracker, tokenManager]);
+  }, [cache, tracker, API_BASE]);
 
   /**
    * Search for available destinations from an origin
@@ -190,15 +148,10 @@ export const useAmadeusAPI = () => {
 
       tracker.trackCall('destinations');
 
-      const token = await tokenManager.getAccessToken();
-      const url = `https://test.api.amadeus.com/v1/shopping/flight-destinations?origin=${origin}&max=50`;
       devLog('🌍 Searching destinations from:', origin);
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Call our backend API (which securely calls Amadeus)
+      const response = await fetch(`${API_BASE}/search-destinations?origin=${origin}`);
 
       if (!response.ok) {
         devError('❌ API returned error status:', response.status, response.statusText);
@@ -223,7 +176,7 @@ export const useAmadeusAPI = () => {
       maxRetries: 3,
       initialDelay: 2000
     });
-  }, [cache, tracker, tokenManager]);
+  }, [cache, tracker, API_BASE]);
 
   return {
     searchAirports,
