@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import FlightCard from './FlightCard';
-import FairnessBreakdown from './FairnessBreakdown';
+import GroupCombinationCard from './GroupCombinationCard';
 import { Button } from '../shared/Button';
+import { calculateFlightCombinations } from '../../utils/flightCombinations';
 
 /**
  * FlightResults Component
@@ -23,7 +24,7 @@ export default function FlightResults({
     destination,
     dateFrom,
     dateTo,
-    fairnessDetails
+    fairnessDetails,
   });
 
   // Get all travelers with their flight data (or null if no flights)
@@ -46,8 +47,16 @@ export default function FlightResults({
     total: allTravelers.length,
     withFlights: travelersWithFlights.length,
     withoutFlights: travelersWithoutFlights.length,
-    hasAnyResults
+    hasAnyResults,
   });
+
+  // Calculate flight combinations
+  const combinations = useMemo(() => {
+    if (!hasAnyResults) return [];
+    return calculateFlightCombinations(flightData, travelers);
+  }, [flightData, travelers, hasAnyResults]);
+
+  console.log('🎯 Calculated combinations:', combinations);
 
   if (!hasAnyResults) {
     return (
@@ -97,7 +106,8 @@ export default function FlightResults({
             <div className="bg-white/70 rounded-lg p-4 border border-yellow-300">
               <p className="text-gray-800 font-semibold mb-2">No flights found</p>
               <p className="text-sm text-gray-600 mb-3">
-                We couldn't find any flights from {traveler.origin} to {destination} for the selected dates.
+                We couldn't find any flights from {traveler.origin} to {destination} for the
+                selected dates.
               </p>
               <div className="text-sm text-gray-700">
                 <p className="font-semibold mb-1">Try:</p>
@@ -119,64 +129,88 @@ export default function FlightResults({
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">Flight Results</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Flight Results for Your Group</h2>
             <p className="text-gray-600 mt-1">
-              Showing results for {destination}
+              {destination} •{' '}
               {dateTo
-                ? ` (${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()})`
-                : ` (${new Date(dateFrom).toLocaleDateString()})`}
+                ? `${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()}`
+                : new Date(dateFrom).toLocaleDateString()}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {travelersWithFlights.length === travelers.length ? (
+                <>✅ Found flights for all {travelers.length} travelers</>
+              ) : (
+                <>
+                  Found flights for {travelersWithFlights.length} of {travelers.length} travelers
+                  {travelersWithoutFlights.length > 0 && (
+                    <span className="text-yellow-700 ml-2">
+                      ⚠️ {travelersWithoutFlights.length} without flights
+                    </span>
+                  )}
+                </>
+              )}
             </p>
           </div>
           <Button onClick={onBack} variant="secondary">
-            ← Back to Search
+            ← Back
           </Button>
         </div>
-
-        {/* Fairness Breakdown */}
-        {fairnessDetails && <FairnessBreakdown fairnessDetails={fairnessDetails} />}
       </div>
 
-      {/* Flight Cards for Each Traveler */}
-      <div className="space-y-4">
-        {allTravelers.map((traveler, index) => (
-          traveler.hasFlights ? (
-            <FlightCard
-              key={traveler.id}
-              traveler={traveler}
-              flightData={traveler.flightData}
-              destination={destination}
-              colorIndex={index}
-            />
-          ) : (
-            <NoFlightsCard
-              key={traveler.id}
-              traveler={traveler}
-              colorIndex={index}
-            />
-          )
+      {/* Recommendation Banner */}
+      {combinations.length > 0 && combinations.some(c => c.recommended) && (
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="text-4xl">💡</div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Our Recommendation</h3>
+              <p className="text-gray-700">
+                We've analyzed all possible flight combinations and found{' '}
+                <span className="font-bold">{combinations.find(c => c.recommended)?.title}</span>{' '}
+                works best for your group. It offers{' '}
+                {combinations.find(c => c.recommended)?.fairness.score >= 75
+                  ? 'excellent price fairness'
+                  : 'a good balance between cost and fairness'}
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flight Combination Cards */}
+      <div className="space-y-6">
+        {combinations.map(combination => (
+          <GroupCombinationCard
+            key={combination.id}
+            combination={combination}
+            destination={destination}
+            isRecommended={combination.recommended}
+          />
         ))}
       </div>
 
-      {/* Summary Footer */}
+      {/* Travelers Without Flights */}
+      {travelersWithoutFlights.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-gray-800">Travelers Without Flights</h3>
+          {travelersWithoutFlights.map((traveler, index) => (
+            <NoFlightsCard
+              key={traveler.id}
+              traveler={traveler}
+              colorIndex={travelersWithFlights.length + index}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
       <div className="bg-white rounded-2xl shadow-xl p-6">
         <div className="text-center">
           <p className="text-gray-600 mb-4">
-            {travelersWithFlights.length === travelers.length ? (
-              <>
-                ✅ Found flights for all {travelers.length} traveler{travelers.length !== 1 ? 's' : ''}
-              </>
-            ) : (
-              <>
-                Found flights for {travelersWithFlights.length} of {travelers.length} travelers
-                {travelersWithoutFlights.length > 0 && (
-                  <span className="block text-yellow-700 text-sm mt-1">
-                    ⚠️ {travelersWithoutFlights.length} traveler{travelersWithoutFlights.length !== 1 ? 's' : ''} without flights
-                  </span>
-                )}
-              </>
-            )}
+            Not seeing what you want? Try adjusting your search criteria.
           </p>
           <div className="flex gap-4 justify-center">
             <Button onClick={onBack} variant="secondary">
