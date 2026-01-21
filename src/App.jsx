@@ -46,24 +46,6 @@ import {
   trackPopularDestination,
 } from './utils/analytics';
 
-// ============================================================================
-// ENVIRONMENT VARIABLE VALIDATION
-// Fail fast if critical configuration is missing
-// ============================================================================
-const requiredEnvVars = [
-  'VITE_AMADEUS_API_KEY',
-  'VITE_AMADEUS_API_SECRET',
-];
-
-requiredEnvVars.forEach((varName) => {
-  if (!import.meta.env[varName]) {
-    throw new Error(
-      `Missing required environment variable: ${varName}. ` +
-      `Please check your .env file. See .env.example for reference.`
-    );
-  }
-});
-
 export default function HolidayPlanner() {
   // ============================================================================
   // STATE MANAGEMENT
@@ -184,7 +166,9 @@ export default function HolidayPlanner() {
   // ============================================================================
 
   const canProceed = useMemo(() => {
-    const hasTripType = Array.isArray(tripType) ? tripType.length > 0 : (tripType && tripType !== 'all');
+    const hasTripType = Array.isArray(tripType)
+      ? tripType.length > 0
+      : tripType && tripType !== 'all';
     return travelers.every(t => t.selectedAirport) && dateFrom && hasTripType;
   }, [travelers, dateFrom, tripType]);
 
@@ -374,12 +358,14 @@ export default function HolidayPlanner() {
 
       // IMPORTANT: Filter by trip type BEFORE pricing to reduce API calls
       // Trip type is now required and can be multiple types
-      const selectedTypes = Array.isArray(tripType) ? tripType : (tripType ? [tripType] : []);
+      const selectedTypes = Array.isArray(tripType) ? tripType : tripType ? [tripType] : [];
       if (selectedTypes.length > 0 && !selectedTypes.includes('all')) {
-        mergedDestinations = mergedDestinations.filter(d =>
-          d.types && d.types.some(type => selectedTypes.includes(type))
+        mergedDestinations = mergedDestinations.filter(
+          d => d.types && d.types.some(type => selectedTypes.includes(type))
         );
-        console.log(`🎯 Filtered to ${mergedDestinations.length} destinations matching: ${selectedTypes.join(', ')}`);
+        console.log(
+          `🎯 Filtered to ${mergedDestinations.length} destinations matching: ${selectedTypes.join(', ')}`
+        );
       }
 
       // Limit to top 15 destinations after filtering to avoid too many price checks
@@ -624,7 +610,10 @@ export default function HolidayPlanner() {
       sorted.sort((a, b) => (b.fairnessScore || 0) - (a.fairnessScore || 0));
     }
 
-    console.log('🔄 Sorted destinations:', sorted.map(d => ({ city: d.city, fairnessScore: d.fairnessScore })));
+    console.log(
+      '🔄 Sorted destinations:',
+      sorted.map(d => ({ city: d.city, fairnessScore: d.fairnessScore }))
+    );
 
     return sorted;
   }, [availableDestinations, sortBy]);
