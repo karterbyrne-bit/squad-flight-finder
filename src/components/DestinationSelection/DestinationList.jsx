@@ -65,17 +65,16 @@ export const DestinationList = ({
               </div>
             </div>
           )}
-          {!loading && destinations.length > 0 && tripType !== 'all' && (
-            <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
-              <span>Filtering: {tripType.charAt(0).toUpperCase() + tripType.slice(1)}</span>
-              <button
-                onClick={() => onTripTypeChange('all')}
-                className="hover:bg-purple-200 rounded-full p-1 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          {!loading && destinations.length > 0 && (() => {
+            const types = Array.isArray(tripType) ? tripType : (tripType && tripType !== 'all' ? [tripType] : []);
+            if (types.length === 0) return null;
+            const typeLabels = types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ');
+            return (
+              <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                <span>Showing: {typeLabels} destinations</span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Sorting Controls */}
