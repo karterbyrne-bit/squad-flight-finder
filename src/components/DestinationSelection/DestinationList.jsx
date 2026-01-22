@@ -16,7 +16,7 @@ export const DestinationList = ({
   sortBy,
   onSortChange,
   tripType,
-  onTripTypeChange,
+  onTripTypeChange: _onTripTypeChange,
   onSearchFlights,
   onBack,
   isSearching,
@@ -65,16 +65,22 @@ export const DestinationList = ({
               </div>
             </div>
           )}
-          {!loading && destinations.length > 0 && (() => {
-            const types = Array.isArray(tripType) ? tripType : (tripType && tripType !== 'all' ? [tripType] : []);
-            if (types.length === 0) return null;
-            const typeLabels = types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ');
-            return (
-              <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
-                <span>Showing: {typeLabels} destinations</span>
-              </div>
-            );
-          })()}
+          {!loading &&
+            destinations.length > 0 &&
+            (() => {
+              const types = Array.isArray(tripType)
+                ? tripType
+                : tripType && tripType !== 'all'
+                  ? [tripType]
+                  : [];
+              if (types.length === 0) return null;
+              const typeLabels = types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ');
+              return (
+                <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                  <span>Showing: {typeLabels} destinations</span>
+                </div>
+              );
+            })()}
         </div>
 
         {/* Sorting Controls */}

@@ -6,7 +6,7 @@
 
 import { amadeusRequest, corsHeaders, handleCors } from './utils/amadeus.js';
 
-export async function handler(event, context) {
+export async function handler(event, _context) {
   // Handle CORS preflight
   const corsResponse = handleCors(event);
   if (corsResponse) return corsResponse;

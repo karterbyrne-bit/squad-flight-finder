@@ -217,7 +217,7 @@ describe('UAT: Core Flight Search', () => {
 
       if (sliders.length > 0) {
         const budgetSlider = sliders[0]
-        const initialValue = budgetSlider.value
+        const _initialValue = budgetSlider.value
 
         // Simulate slider change
         const changeEvent = new Event('input', { bubbles: true })
