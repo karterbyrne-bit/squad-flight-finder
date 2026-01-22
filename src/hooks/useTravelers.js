@@ -201,7 +201,7 @@ export const useTravelers = () => {
 
     searchTimeoutRef.current[travelerId] = setTimeout(() => {
       searchAirportsForCity(travelerId, cityName);
-    }, 800);
+    }, 1200);
   }, [searchAirportsForCity]);
 
   /**

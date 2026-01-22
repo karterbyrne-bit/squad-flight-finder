@@ -457,8 +457,13 @@ export default function HolidayPlanner() {
       }
 
       const filters = getFlightFilters();
+      const requestDirectFlightsOnly = filters.nonStop;
 
       // Search flights for each traveler
+      // OPTIMIZATION: Always search with nonStop=false, then filter client-side
+      // This avoids duplicate API calls when no direct flights are found
+      const searchFilters = { ...filters, nonStop: false };
+
       const flightPromises = travelers.map(async traveler => {
         const airportsToCheck = getAirportsToCheck(traveler);
         if (airportsToCheck.length === 0) return null;
@@ -470,7 +475,7 @@ export default function HolidayPlanner() {
             dateFrom,
             1,
             dateTo,
-            filters
+            searchFilters
           );
 
           return flights.map(flight => ({
@@ -483,30 +488,15 @@ export default function HolidayPlanner() {
         const allResults = await Promise.all(allFlightSearches);
         let allFlights = allResults.flat().filter(f => f);
 
-        // Fallback for connecting flights if no direct flights found
-        if (allFlights.length === 0 && filters.nonStop) {
-          const fallbackFilters = { ...filters, nonStop: false };
-          const fallbackSearches = airportsToCheck.map(async airport => {
-            const flights = await searchFlights(
-              airport.code,
-              destinationCode,
-              dateFrom,
-              1,
-              dateTo,
-              fallbackFilters
-            );
-            return flights.map(flight => ({
-              ...flight,
-              departureAirport: airport,
-              weightedScore: calculateWeightedScore(
-                parseFloat(flight.price.total),
-                airport.distance
-              ),
-            }));
-          });
-
-          const fallbackResults = await Promise.all(fallbackSearches);
-          allFlights = fallbackResults.flat().filter(f => f);
+        // Client-side filtering: prefer direct flights if requested
+        if (requestDirectFlightsOnly && allFlights.length > 0) {
+          const directFlights = allFlights.filter(flight =>
+            flight.itineraries.every(itinerary => itinerary.segments.length === 1)
+          );
+          // Only use direct flights if we found any, otherwise show connecting flights
+          if (directFlights.length > 0) {
+            allFlights = directFlights;
+          }
         }
 
         if (allFlights.length === 0) return null;

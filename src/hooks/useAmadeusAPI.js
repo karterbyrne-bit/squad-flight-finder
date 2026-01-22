@@ -46,8 +46,8 @@ export const useAmadeusAPI = () => {
           const data = await response.json();
           const result = data.data || [];
 
-          // Cache for 60 minutes (airports don't change often)
-          cache.set('airports', cacheParams, result, 60);
+          // Cache for 24 hours (airports rarely change)
+          cache.set('airports', cacheParams, result, 1440);
 
           return result;
         },
@@ -143,8 +143,8 @@ export const useAmadeusAPI = () => {
             devLog(`   Filtered to ${results.length} flights with max ${filters.maxStops} stops`);
           }
 
-          // Cache for 30 minutes
-          cache.set('flights', cacheParams, results, 30);
+          // Cache for 2 hours (flight prices change infrequently for same-day searches)
+          cache.set('flights', cacheParams, results, 120);
 
           return results;
         },
@@ -194,8 +194,8 @@ export const useAmadeusAPI = () => {
 
           const result = data.data || [];
 
-          // Cache for 60 minutes (destinations don't change often)
-          cache.set('destinations', cacheParams, result, 60);
+          // Cache for 4 hours (destinations change infrequently)
+          cache.set('destinations', cacheParams, result, 240);
 
           return result;
         },
