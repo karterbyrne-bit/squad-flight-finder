@@ -12,8 +12,8 @@ export const useAmadeusAPI = () => {
   const { cache, tracker } = useCache();
 
   // Determine API base URL based on environment
-  // In dev mode, Vite proxy will forward /api to Netlify Dev (localhost:8888)
-  // In production, Netlify redirects handle /api -> /.netlify/functions
+  // In dev mode, Vercel Dev automatically routes /api to serverless functions
+  // In production, Vercel routes /api to deployed serverless functions
   const API_BASE = '/api';
 
   /**

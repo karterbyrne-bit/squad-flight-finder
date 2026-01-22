@@ -4,16 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    // Proxy API calls to Netlify Dev server when running `npm run dev`
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8888',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
-  },
   build: {
     // Enable code splitting for better caching
     rollupOptions: {
