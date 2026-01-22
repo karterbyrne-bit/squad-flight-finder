@@ -3,6 +3,13 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Local development
+[dev]
+  command = "npm run dev:vite-only"
+  targetPort = 5173
+  port = 8888
+  autoLaunch = false
+
 # Security headers
 [[headers]]
   for = "/*"
