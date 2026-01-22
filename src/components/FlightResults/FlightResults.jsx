@@ -4,6 +4,7 @@ import FlightCard from './FlightCard';
 import GroupCombinationCard from './GroupCombinationCard';
 import { Button } from '../shared/Button';
 import { calculateFlightCombinations } from '../../utils/flightCombinations';
+import AdSense from '../AdSense';
 
 /**
  * FlightResults Component
@@ -177,6 +178,19 @@ export default function FlightResults({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* AdSense - Results Page */}
+      {import.meta.env.VITE_ADSENSE_CLIENT && import.meta.env.VITE_ADSENSE_SLOT_RESULTS && (
+        <div className="my-6">
+          <AdSense
+            adClient={import.meta.env.VITE_ADSENSE_CLIENT}
+            adSlot={import.meta.env.VITE_ADSENSE_SLOT_RESULTS}
+            adFormat="auto"
+            fullWidthResponsive={true}
+            style={{ minHeight: '100px' }}
+          />
         </div>
       )}
 

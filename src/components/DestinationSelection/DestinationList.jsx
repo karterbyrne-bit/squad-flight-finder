@@ -4,6 +4,7 @@ import { DestinationCard } from './DestinationCard';
 import { DestinationFilters } from './DestinationFilters';
 import { Button } from '../shared/Button';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
+import AdSense from '../AdSense';
 
 export const DestinationList = ({
   destinations,
