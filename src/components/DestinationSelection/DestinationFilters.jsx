@@ -6,20 +6,20 @@ const sortOptions = [
     id: 'avgPrice',
     label: 'Avg Price',
     Icon: DollarSign,
-    description: 'Average price across all travelers'
+    description: 'Average price across all travelers',
   },
   {
     id: 'fairness',
     label: 'Fairness',
     Icon: Scale,
-    description: 'Best fairness score - most balanced costs across group'
+    description: 'Best fairness score - most balanced costs across group',
   },
   {
     id: 'minPrice',
     label: 'Cheapest',
     Icon: TrendingDown,
-    description: 'Lowest individual ticket price'
-  }
+    description: 'Lowest individual ticket price',
+  },
 ];
 
 export const DestinationFilters = ({ sortBy, onSortChange }) => {
@@ -32,9 +32,11 @@ export const DestinationFilters = ({ sortBy, onSortChange }) => {
         </label>
       </div>
       <p className="text-xs text-gray-600 mb-2">
-        Choose how to rank destinations: average cost across all travelers, fairness (smallest price difference), or cheapest individual ticket
+        Choose how to rank destinations: average cost across all travelers, fairness (smallest price
+        difference), or cheapest individual ticket
       </p>
       <div className="grid grid-cols-3 gap-2">
+        {/* eslint-disable-next-line no-unused-vars */}
         {sortOptions.map(({ id, label, Icon, description }) => (
           <button
             key={id}
@@ -46,8 +48,12 @@ export const DestinationFilters = ({ sortBy, onSortChange }) => {
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
-            <Icon className={`w-5 h-5 mx-auto mb-1 ${sortBy === id ? 'text-purple-600' : 'text-gray-400'}`} />
-            <p className={`text-xs font-bold ${sortBy === id ? 'text-purple-600' : 'text-gray-600'}`}>
+            <Icon
+              className={`w-5 h-5 mx-auto mb-1 ${sortBy === id ? 'text-purple-600' : 'text-gray-400'}`}
+            />
+            <p
+              className={`text-xs font-bold ${sortBy === id ? 'text-purple-600' : 'text-gray-600'}`}
+            >
               {label}
             </p>
           </button>

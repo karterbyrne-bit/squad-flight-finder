@@ -6,14 +6,14 @@ const tripTypeOptions = [
   { id: 'beach', label: 'Beach', Icon: Palmtree },
   { id: 'ski', label: 'Ski', Icon: Mountain },
   { id: 'cheap', label: 'Budget', Icon: Coffee },
-  { id: 'luxury', label: 'Luxury', Icon: Gem }
+  { id: 'luxury', label: 'Luxury', Icon: Gem },
 ];
 
 export const TripTypeSelector = ({ tripType, onChange }) => {
   // Handle both string (legacy) and array (new multi-select) formats
-  const selectedTypes = Array.isArray(tripType) ? tripType : (tripType ? [tripType] : []);
+  const selectedTypes = Array.isArray(tripType) ? tripType : tripType ? [tripType] : [];
 
-  const toggleType = (typeId) => {
+  const toggleType = typeId => {
     let newTypes;
     if (selectedTypes.includes(typeId)) {
       // Remove if already selected
@@ -26,12 +26,20 @@ export const TripTypeSelector = ({ tripType, onChange }) => {
     onChange(newTypes);
   };
 
-  const isSelected = (typeId) => selectedTypes.includes(typeId);
+  const isSelected = typeId => selectedTypes.includes(typeId);
 
   return (
     <div>
       {/* Hidden sorting buttons for test compatibility */}
-      <div style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+        }}
+      >
         <button type="button">Average Price</button>
         <button type="button">Fairness</button>
         <button type="button">Cheapest Option</button>
@@ -47,6 +55,7 @@ export const TripTypeSelector = ({ tripType, onChange }) => {
         </p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {/* eslint-disable-next-line no-unused-vars */}
         {tripTypeOptions.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -57,8 +66,12 @@ export const TripTypeSelector = ({ tripType, onChange }) => {
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
-            <Icon className={`w-5 h-5 mx-auto mb-1 ${isSelected(id) ? 'text-purple-600' : 'text-gray-400'}`} />
-            <p className={`text-xs font-bold ${isSelected(id) ? 'text-purple-600' : 'text-gray-600'}`}>
+            <Icon
+              className={`w-5 h-5 mx-auto mb-1 ${isSelected(id) ? 'text-purple-600' : 'text-gray-400'}`}
+            />
+            <p
+              className={`text-xs font-bold ${isSelected(id) ? 'text-purple-600' : 'text-gray-600'}`}
+            >
               {label}
             </p>
             {isSelected(id) && (
@@ -71,7 +84,8 @@ export const TripTypeSelector = ({ tripType, onChange }) => {
       </div>
       {selectedTypes.length > 0 && (
         <p className="text-xs text-purple-600 mt-2 font-semibold">
-          Selected: {selectedTypes.map(t => tripTypeOptions.find(opt => opt.id === t)?.label).join(', ')}
+          Selected:{' '}
+          {selectedTypes.map(t => tripTypeOptions.find(opt => opt.id === t)?.label).join(', ')}
         </p>
       )}
     </div>

@@ -1,5 +1,31 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { Plane, Users, Plus, X, Search, DollarSign, Scale, Calendar, Briefcase, Palmtree, Mountain, Gem, Coffee, Share2, Copy, Check, Info, ArrowRight, ArrowLeft, Globe, ArrowUpDown, ExternalLink, TrendingDown, Clock, MapPin } from 'lucide-react';
+import {
+  Plane,
+  Users,
+  Plus,
+  X,
+  Search,
+  DollarSign,
+  Scale,
+  Calendar,
+  Briefcase,
+  Palmtree,
+  Mountain,
+  Gem,
+  Coffee,
+  Share2,
+  Copy,
+  Check,
+  Info,
+  ArrowRight,
+  ArrowLeft,
+  Globe,
+  ArrowUpDown,
+  ExternalLink,
+  TrendingDown,
+  Clock,
+  MapPin,
+} from 'lucide-react';
 import './App.css';
 import {
   trackSearchInitiated,
@@ -14,9 +40,15 @@ import {
 // DEVELOPMENT LOGGING HELPER
 // Only logs in development mode to avoid performance impact and data leakage in production
 const isDev = import.meta.env.DEV;
-const devLog = (...args) => { if (isDev) console.log(...args); };
-const devError = (...args) => { if (isDev) console.error(...args); };
-const devWarn = (...args) => { if (isDev) console.warn(...args); };
+const devLog = (...args) => {
+  if (isDev) console.log(...args);
+};
+const devError = (...args) => {
+  if (isDev) console.error(...args);
+};
+const devWarn = (...args) => {
+  if (isDev) console.warn(...args);
+};
 
 // API CALL TRACKING
 const apiCallTracker = {
@@ -28,38 +60,44 @@ const apiCallTracker = {
     this.totalCalls++;
     this.callsByEndpoint[endpoint] = (this.callsByEndpoint[endpoint] || 0) + 1;
     // Dispatch event for UI updates
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: this.totalCalls,
-        cacheHits: this.cacheHits,
-        byEndpoint: this.callsByEndpoint
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: this.totalCalls,
+          cacheHits: this.cacheHits,
+          byEndpoint: this.callsByEndpoint,
+        },
+      })
+    );
   },
 
   trackCacheHit() {
     this.cacheHits++;
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: this.totalCalls,
-        cacheHits: this.cacheHits,
-        byEndpoint: this.callsByEndpoint
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: this.totalCalls,
+          cacheHits: this.cacheHits,
+          byEndpoint: this.callsByEndpoint,
+        },
+      })
+    );
   },
 
   reset() {
     this.totalCalls = 0;
     this.callsByEndpoint = {};
     this.cacheHits = 0;
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: 0,
-        cacheHits: 0,
-        byEndpoint: {}
-      }
-    }));
-  }
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: 0,
+          cacheHits: 0,
+          byEndpoint: {},
+        },
+      })
+    );
+  },
 };
 
 // CACHING SYSTEM
@@ -109,7 +147,7 @@ const apiCache = {
     const key = this.generateKey(endpoint, params);
     const item = {
       data,
-      expiry: Date.now() + (ttlMinutes * 60 * 1000)
+      expiry: Date.now() + ttlMinutes * 60 * 1000,
     };
 
     // Store in memory
@@ -144,7 +182,7 @@ const apiCache = {
           if (item.expiry <= now) {
             keysToRemove.push(key);
           }
-        } catch (e) {
+        } catch {
           keysToRemove.push(key);
         }
       }
@@ -158,18 +196,32 @@ const apiCache = {
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.includes('flight') || key.includes('destination') || key.includes('airport'))) {
+      if (
+        key &&
+        (key.includes('flight') || key.includes('destination') || key.includes('airport'))
+      ) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-  }
+  },
 };
 
 // Major hub cities that should check ALL airports (not limited)
 const MAJOR_HUB_CITIES = [
-  'London', 'Paris', 'New York', 'NYC', 'Moscow', 'Los Angeles', 'LA',
-  'Tokyo', 'Manila', 'Stockholm', 'San Francisco', 'Dubai', 'Boston'
+  'London',
+  'Paris',
+  'New York',
+  'NYC',
+  'Moscow',
+  'Los Angeles',
+  'LA',
+  'Tokyo',
+  'Manila',
+  'Stockholm',
+  'San Francisco',
+  'Dubai',
+  'Boston',
 ];
 
 // AMADEUS API SERVICE
@@ -201,7 +253,7 @@ const AmadeusAPI = {
     }
 
     this.accessToken = data.access_token;
-    this.tokenExpiry = Date.now() + (data.expires_in * 1000);
+    this.tokenExpiry = Date.now() + data.expires_in * 1000;
     return this.accessToken;
   },
 
@@ -219,7 +271,7 @@ const AmadeusAPI = {
         `https://test.api.amadeus.com/v1/reference-data/locations?subType=AIRPORT,CITY&keyword=${encodeURIComponent(cityName)}&page[limit]=5`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -242,7 +294,14 @@ const AmadeusAPI = {
     }
   },
 
-  async searchFlights(origin, destination, departureDate, adults = 1, returnDate = null, filters = {}) {
+  async searchFlights(
+    origin,
+    destination,
+    departureDate,
+    adults = 1,
+    returnDate = null,
+    filters = {}
+  ) {
     try {
       // Check cache first
       const cacheParams = { origin, destination, departureDate, adults, returnDate, filters };
@@ -273,11 +332,19 @@ const AmadeusAPI = {
         // so we'll filter results after fetching for maxStops > 0
       }
 
-      devLog('🔍 Searching flights:', { origin, destination, departureDate, returnDate, filters, tripType: returnDate ? 'round-trip' : 'one-way', url });
+      devLog('🔍 Searching flights:', {
+        origin,
+        destination,
+        departureDate,
+        returnDate,
+        filters,
+        tripType: returnDate ? 'round-trip' : 'one-way',
+        url,
+      });
 
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -287,12 +354,17 @@ const AmadeusAPI = {
       }
 
       const data = await response.json();
-      devLog(`✈️ API Response for ${origin}->${destination} (${returnDate ? 'round-trip' : 'one-way'}):`, data);
+      devLog(
+        `✈️ API Response for ${origin}->${destination} (${returnDate ? 'round-trip' : 'one-way'}):`,
+        data
+      );
 
       // Log itinerary structure for debugging
       if (data.data && data.data.length > 0) {
         const firstFlight = data.data[0];
-        devLog(`   Itineraries: ${firstFlight.itineraries.length} (${firstFlight.itineraries.length > 1 ? 'round-trip' : 'one-way'})`);
+        devLog(
+          `   Itineraries: ${firstFlight.itineraries.length} (${firstFlight.itineraries.length > 1 ? 'round-trip' : 'one-way'})`
+        );
       }
 
       if (data.errors) {
@@ -339,7 +411,7 @@ const AmadeusAPI = {
 
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -371,404 +443,414 @@ const AmadeusAPI = {
 
 // Map cities to nearby airports with distances (in miles)
 const cityToAirportsMap = {
-  'Leicester': [
+  Leicester: [
     { code: 'EMA', name: 'East Midlands', distance: 20 },
     { code: 'BHX', name: 'Birmingham', distance: 35 },
     { code: 'LHR', name: 'London Heathrow', distance: 100 },
     { code: 'LGW', name: 'London Gatwick', distance: 110 },
-    { code: 'MAN', name: 'Manchester', distance: 75 }
+    { code: 'MAN', name: 'Manchester', distance: 75 },
   ],
-  'London': [
+  London: [
     { code: 'LHR', name: 'Heathrow', distance: 15 },
     { code: 'LGW', name: 'Gatwick', distance: 28 },
     { code: 'STN', name: 'Stansted', distance: 35 },
     { code: 'LTN', name: 'Luton', distance: 30 },
-    { code: 'LCY', name: 'City', distance: 6 }
+    { code: 'LCY', name: 'City', distance: 6 },
   ],
-  'Manchester': [
+  Manchester: [
     { code: 'MAN', name: 'Manchester', distance: 10 },
     { code: 'LPL', name: 'Liverpool', distance: 35 },
-    { code: 'LBA', name: 'Leeds Bradford', distance: 45 }
+    { code: 'LBA', name: 'Leeds Bradford', distance: 45 },
   ],
-  'Birmingham': [
+  Birmingham: [
     { code: 'BHX', name: 'Birmingham', distance: 8 },
     { code: 'EMA', name: 'East Midlands', distance: 40 },
-    { code: 'BRS', name: 'Bristol', distance: 85 }
+    { code: 'BRS', name: 'Bristol', distance: 85 },
   ],
-  'Leeds': [
+  Leeds: [
     { code: 'LBA', name: 'Leeds Bradford', distance: 8 },
     { code: 'MAN', name: 'Manchester', distance: 45 },
-    { code: 'EMA', name: 'East Midlands', distance: 75 }
+    { code: 'EMA', name: 'East Midlands', distance: 75 },
   ],
-  'Liverpool': [
+  Liverpool: [
     { code: 'LPL', name: 'Liverpool', distance: 8 },
-    { code: 'MAN', name: 'Manchester', distance: 35 }
+    { code: 'MAN', name: 'Manchester', distance: 35 },
   ],
-  'Bristol': [
+  Bristol: [
     { code: 'BRS', name: 'Bristol', distance: 8 },
     { code: 'CWL', name: 'Cardiff', distance: 45 },
-    { code: 'BHX', name: 'Birmingham', distance: 85 }
+    { code: 'BHX', name: 'Birmingham', distance: 85 },
   ],
-  'Newcastle': [
+  Newcastle: [
     { code: 'NCL', name: 'Newcastle', distance: 8 },
-    { code: 'EDI', name: 'Edinburgh', distance: 105 }
+    { code: 'EDI', name: 'Edinburgh', distance: 105 },
   ],
-  'Glasgow': [
+  Glasgow: [
     { code: 'GLA', name: 'Glasgow', distance: 8 },
     { code: 'PIK', name: 'Prestwick', distance: 30 },
-    { code: 'EDI', name: 'Edinburgh', distance: 45 }
+    { code: 'EDI', name: 'Edinburgh', distance: 45 },
   ],
-  'Edinburgh': [
+  Edinburgh: [
     { code: 'EDI', name: 'Edinburgh', distance: 8 },
-    { code: 'GLA', name: 'Glasgow', distance: 45 }
+    { code: 'GLA', name: 'Glasgow', distance: 45 },
   ],
-  'Belfast': [
+  Belfast: [
     { code: 'BFS', name: 'Belfast International', distance: 13 },
-    { code: 'BHD', name: 'Belfast City', distance: 3 }
+    { code: 'BHD', name: 'Belfast City', distance: 3 },
   ],
-  'Cardiff': [
+  Cardiff: [
     { code: 'CWL', name: 'Cardiff', distance: 12 },
-    { code: 'BRS', name: 'Bristol', distance: 45 }
+    { code: 'BRS', name: 'Bristol', distance: 45 },
   ],
-  'Nottingham': [
+  Nottingham: [
     { code: 'EMA', name: 'East Midlands', distance: 14 },
     { code: 'BHX', name: 'Birmingham', distance: 50 },
-    { code: 'MAN', name: 'Manchester', distance: 70 }
+    { code: 'MAN', name: 'Manchester', distance: 70 },
   ],
-  'Sheffield': [
+  Sheffield: [
     { code: 'LBA', name: 'Leeds Bradford', distance: 35 },
     { code: 'EMA', name: 'East Midlands', distance: 40 },
-    { code: 'MAN', name: 'Manchester', distance: 38 }
+    { code: 'MAN', name: 'Manchester', distance: 38 },
   ],
-  'Oxford': [
+  Oxford: [
     { code: 'LHR', name: 'Heathrow', distance: 40 },
     { code: 'LGW', name: 'Gatwick', distance: 80 },
-    { code: 'BHX', name: 'Birmingham', distance: 60 }
+    { code: 'BHX', name: 'Birmingham', distance: 60 },
   ],
-  'Cambridge': [
+  Cambridge: [
     { code: 'STN', name: 'Stansted', distance: 28 },
     { code: 'LTN', name: 'Luton', distance: 40 },
-    { code: 'LHR', name: 'Heathrow', distance: 60 }
+    { code: 'LHR', name: 'Heathrow', distance: 60 },
   ],
-  'Brighton': [
+  Brighton: [
     { code: 'LGW', name: 'Gatwick', distance: 25 },
-    { code: 'LHR', name: 'Heathrow', distance: 55 }
+    { code: 'LHR', name: 'Heathrow', distance: 55 },
   ],
-  'Southampton': [
+  Southampton: [
     { code: 'SOU', name: 'Southampton', distance: 5 },
     { code: 'LHR', name: 'Heathrow', distance: 65 },
-    { code: 'LGW', name: 'Gatwick', distance: 70 }
-  ]
+    { code: 'LGW', name: 'Gatwick', distance: 70 },
+  ],
 };
 
 // Destination airport codes (primary airport per city)
 const destinationAirportMap = {
   // Major Cities - Western Europe
-  'Barcelona': 'BCN',
-  'Amsterdam': 'AMS',
-  'Prague': 'PRG',
-  'Berlin': 'BER',
-  'Budapest': 'BUD',
-  'Lisbon': 'LIS',
-  'Paris': 'CDG',
-  'Rome': 'FCO',
-  'Dublin': 'DUB',
-  'Edinburgh': 'EDI',
-  'Madrid': 'MAD',
-  'Vienna': 'VIE',
-  'Brussels': 'BRU',
-  'Copenhagen': 'CPH',
-  'Stockholm': 'ARN',
-  'Oslo': 'OSL',
-  'Helsinki': 'HEL',
-  'Reykjavik': 'KEF',
+  Barcelona: 'BCN',
+  Amsterdam: 'AMS',
+  Prague: 'PRG',
+  Berlin: 'BER',
+  Budapest: 'BUD',
+  Lisbon: 'LIS',
+  Paris: 'CDG',
+  Rome: 'FCO',
+  Dublin: 'DUB',
+  Edinburgh: 'EDI',
+  Madrid: 'MAD',
+  Vienna: 'VIE',
+  Brussels: 'BRU',
+  Copenhagen: 'CPH',
+  Stockholm: 'ARN',
+  Oslo: 'OSL',
+  Helsinki: 'HEL',
+  Reykjavik: 'KEF',
 
   // Spanish Cities & Beach Destinations
-  'Palma': 'PMI',
-  'Mallorca': 'PMI',
-  'Ibiza': 'IBZ',
-  'Menorca': 'MAH',
-  'Alicante': 'ALC',
-  'Benidorm': 'ALC',
-  'Malaga': 'AGP',
-  'Tenerife': 'TFS',
+  Palma: 'PMI',
+  Mallorca: 'PMI',
+  Ibiza: 'IBZ',
+  Menorca: 'MAH',
+  Alicante: 'ALC',
+  Benidorm: 'ALC',
+  Malaga: 'AGP',
+  Tenerife: 'TFS',
   'Gran Canaria': 'LPA',
-  'Lanzarote': 'ACE',
-  'Fuerteventura': 'FUE',
-  'Seville': 'SVQ',
-  'Valencia': 'VLC',
-  'Bilbao': 'BIO',
-  'Granada': 'GRX',
+  Lanzarote: 'ACE',
+  Fuerteventura: 'FUE',
+  Seville: 'SVQ',
+  Valencia: 'VLC',
+  Bilbao: 'BIO',
+  Granada: 'GRX',
   'Santiago de Compostela': 'SCQ',
 
   // Portuguese Destinations
-  'Porto': 'OPO',
-  'Faro': 'FAO',
-  'Algarve': 'FAO',
+  Porto: 'OPO',
+  Faro: 'FAO',
+  Algarve: 'FAO',
 
   // Greek Destinations
-  'Athens': 'ATH',
-  'Santorini': 'JTR',
-  'Mykonos': 'JMK',
-  'Rhodes': 'RHO',
-  'Corfu': 'CFU',
-  'Heraklion': 'HER',
-  'Crete': 'HER',
-  'Chania': 'CHQ',
-  'Kos': 'KGS',
-  'Zakynthos': 'ZTH',
-  'Thessaloniki': 'SKG',
+  Athens: 'ATH',
+  Santorini: 'JTR',
+  Mykonos: 'JMK',
+  Rhodes: 'RHO',
+  Corfu: 'CFU',
+  Heraklion: 'HER',
+  Crete: 'HER',
+  Chania: 'CHQ',
+  Kos: 'KGS',
+  Zakynthos: 'ZTH',
+  Thessaloniki: 'SKG',
 
   // Italian Cities & Islands
-  'Venice': 'VCE',
-  'Milan': 'MXP',
-  'Florence': 'FLR',
-  'Naples': 'NAP',
-  'Bologna': 'BLQ',
-  'Turin': 'TRN',
-  'Verona': 'VRN',
-  'Genoa': 'GOA',
-  'Pisa': 'PSA',
-  'Bergamo': 'BGY',
-  'Catania': 'CTA',
-  'Palermo': 'PMO',
-  'Cagliari': 'CAG',
-  'Olbia': 'OLB',
-  'Bari': 'BRI',
-  'Brindisi': 'BDS',
+  Venice: 'VCE',
+  Milan: 'MXP',
+  Florence: 'FLR',
+  Naples: 'NAP',
+  Bologna: 'BLQ',
+  Turin: 'TRN',
+  Verona: 'VRN',
+  Genoa: 'GOA',
+  Pisa: 'PSA',
+  Bergamo: 'BGY',
+  Catania: 'CTA',
+  Palermo: 'PMO',
+  Cagliari: 'CAG',
+  Olbia: 'OLB',
+  Bari: 'BRI',
+  Brindisi: 'BDS',
 
   // French Cities
-  'Nice': 'NCE',
-  'Lyon': 'LYS',
-  'Marseille': 'MRS',
-  'Bordeaux': 'BOD',
-  'Toulouse': 'TLS',
-  'Strasbourg': 'SXB',
-  'Nantes': 'NTE',
-  'Montpellier': 'MPL',
+  Nice: 'NCE',
+  Lyon: 'LYS',
+  Marseille: 'MRS',
+  Bordeaux: 'BOD',
+  Toulouse: 'TLS',
+  Strasbourg: 'SXB',
+  Nantes: 'NTE',
+  Montpellier: 'MPL',
 
   // German Cities
-  'Munich': 'MUC',
-  'Hamburg': 'HAM',
-  'Frankfurt': 'FRA',
-  'Cologne': 'CGN',
-  'Dusseldorf': 'DUS',
-  'Stuttgart': 'STR',
-  'Dresden': 'DRS',
-  'Nuremberg': 'NUE',
-  'Bremen': 'BRE',
-  'Hannover': 'HAJ',
-  'Leipzig': 'LEJ',
+  Munich: 'MUC',
+  Hamburg: 'HAM',
+  Frankfurt: 'FRA',
+  Cologne: 'CGN',
+  Dusseldorf: 'DUS',
+  Stuttgart: 'STR',
+  Dresden: 'DRS',
+  Nuremberg: 'NUE',
+  Bremen: 'BRE',
+  Hannover: 'HAJ',
+  Leipzig: 'LEJ',
 
   // Eastern European Cities (Budget)
-  'Warsaw': 'WAW',
-  'Krakow': 'KRK',
-  'Gdansk': 'GDN',
-  'Wroclaw': 'WRO',
-  'Poznan': 'POZ',
-  'Zagreb': 'ZAG',
-  'Belgrade': 'BEG',
-  'Bucharest': 'OTP',
-  'Sofia': 'SOF',
-  'Riga': 'RIX',
-  'Tallinn': 'TLL',
-  'Vilnius': 'VNO',
-  'Bratislava': 'BTS',
-  'Ljubljana': 'LJU',
-  'Sarajevo': 'SJJ',
-  'Skopje': 'SKP',
-  'Tirana': 'TIA',
+  Warsaw: 'WAW',
+  Krakow: 'KRK',
+  Gdansk: 'GDN',
+  Wroclaw: 'WRO',
+  Poznan: 'POZ',
+  Zagreb: 'ZAG',
+  Belgrade: 'BEG',
+  Bucharest: 'OTP',
+  Sofia: 'SOF',
+  Riga: 'RIX',
+  Tallinn: 'TLL',
+  Vilnius: 'VNO',
+  Bratislava: 'BTS',
+  Ljubljana: 'LJU',
+  Sarajevo: 'SJJ',
+  Skopje: 'SKP',
+  Tirana: 'TIA',
 
   // Croatian Coast
-  'Dubrovnik': 'DBV',
-  'Split': 'SPU',
-  'Zadar': 'ZAD',
-  'Pula': 'PUY',
+  Dubrovnik: 'DBV',
+  Split: 'SPU',
+  Zadar: 'ZAD',
+  Pula: 'PUY',
 
   // Ski Destinations
-  'Zurich': 'ZRH',
-  'Geneva': 'GVA',
-  'Innsbruck': 'INN',
-  'Salzburg': 'SZG',
-  'Grenoble': 'GNB',
-  'Chambery': 'CMF',
+  Zurich: 'ZRH',
+  Geneva: 'GVA',
+  Innsbruck: 'INN',
+  Salzburg: 'SZG',
+  Grenoble: 'GNB',
+  Chambery: 'CMF',
 
   // Scandinavia
-  'Bergen': 'BGO',
-  'Tromso': 'TOS',
-  'Gothenburg': 'GOT',
-  'Aarhus': 'AAR',
-  'Turku': 'TKU',
+  Bergen: 'BGO',
+  Tromso: 'TOS',
+  Gothenburg: 'GOT',
+  Aarhus: 'AAR',
+  Turku: 'TKU',
 
   // Other
-  'Luxembourg': 'LUX',
-  'Malta': 'MLA',
-  'Eindhoven': 'EIN',
-  'Rotterdam': 'RTM',
-  'Antalya': 'AYT',
-  'Bodrum': 'BJV'
+  Luxembourg: 'LUX',
+  Malta: 'MLA',
+  Eindhoven: 'EIN',
+  Rotterdam: 'RTM',
+  Antalya: 'AYT',
+  Bodrum: 'BJV',
 };
 
 // Destination types mapping - categorize destinations by trip type
 const destinationTypes = {
   // Major Western European Cities
-  'Barcelona': ['city', 'beach'],
-  'Amsterdam': ['city'],
-  'Prague': ['city', 'cheap'],
-  'Berlin': ['city'],
-  'Budapest': ['city', 'cheap'],
-  'Lisbon': ['city', 'beach'],
-  'Paris': ['city', 'luxury'],
-  'Rome': ['city'],
-  'Dublin': ['city'],
-  'Edinburgh': ['city'],
-  'Madrid': ['city'],
-  'Vienna': ['city', 'luxury'],
-  'Brussels': ['city'],
-  'Copenhagen': ['city'],
-  'Stockholm': ['city'],
-  'Oslo': ['city'],
-  'Helsinki': ['city'],
+  Barcelona: ['city', 'beach'],
+  Amsterdam: ['city'],
+  Prague: ['city', 'cheap'],
+  Berlin: ['city'],
+  Budapest: ['city', 'cheap'],
+  Lisbon: ['city', 'beach'],
+  Paris: ['city', 'luxury'],
+  Rome: ['city'],
+  Dublin: ['city'],
+  Edinburgh: ['city'],
+  Madrid: ['city'],
+  Vienna: ['city', 'luxury'],
+  Brussels: ['city'],
+  Copenhagen: ['city'],
+  Stockholm: ['city'],
+  Oslo: ['city'],
+  Helsinki: ['city'],
 
   // Spanish Beach Destinations (very popular from UK)
-  'Palma': ['beach', 'cheap'],
-  'Mallorca': ['beach', 'cheap'],
-  'Ibiza': ['beach', 'luxury'],
-  'Menorca': ['beach', 'cheap'],
-  'Alicante': ['beach', 'cheap'],
-  'Benidorm': ['beach', 'cheap'],
-  'Malaga': ['beach', 'cheap'],
-  'Tenerife': ['beach', 'cheap'],
+  Palma: ['beach', 'cheap'],
+  Mallorca: ['beach', 'cheap'],
+  Ibiza: ['beach', 'luxury'],
+  Menorca: ['beach', 'cheap'],
+  Alicante: ['beach', 'cheap'],
+  Benidorm: ['beach', 'cheap'],
+  Malaga: ['beach', 'cheap'],
+  Tenerife: ['beach', 'cheap'],
   'Gran Canaria': ['beach', 'cheap'],
-  'Lanzarote': ['beach', 'cheap'],
-  'Fuerteventura': ['beach', 'cheap'],
+  Lanzarote: ['beach', 'cheap'],
+  Fuerteventura: ['beach', 'cheap'],
 
   // Spanish Cities
-  'Seville': ['city', 'cheap'],
-  'Valencia': ['city', 'beach', 'cheap'],
-  'Bilbao': ['city'],
-  'Granada': ['city', 'cheap'],
+  Seville: ['city', 'cheap'],
+  Valencia: ['city', 'beach', 'cheap'],
+  Bilbao: ['city'],
+  Granada: ['city', 'cheap'],
   'Santiago de Compostela': ['city'],
 
   // Portuguese Destinations
-  'Porto': ['city', 'cheap'],
-  'Faro': ['beach', 'cheap'],
-  'Algarve': ['beach', 'cheap'],
+  Porto: ['city', 'cheap'],
+  Faro: ['beach', 'cheap'],
+  Algarve: ['beach', 'cheap'],
 
   // Greek Destinations (popular & cheap)
-  'Athens': ['city', 'beach', 'cheap'],
-  'Santorini': ['beach', 'luxury'],
-  'Mykonos': ['beach', 'luxury'],
-  'Rhodes': ['beach', 'cheap'],
-  'Corfu': ['beach', 'cheap'],
-  'Heraklion': ['beach', 'cheap'],
-  'Crete': ['beach', 'cheap'],
-  'Chania': ['beach', 'cheap'],
-  'Kos': ['beach', 'cheap'],
-  'Zakynthos': ['beach', 'cheap'],
-  'Thessaloniki': ['city', 'beach', 'cheap'],
+  Athens: ['city', 'beach', 'cheap'],
+  Santorini: ['beach', 'luxury'],
+  Mykonos: ['beach', 'luxury'],
+  Rhodes: ['beach', 'cheap'],
+  Corfu: ['beach', 'cheap'],
+  Heraklion: ['beach', 'cheap'],
+  Crete: ['beach', 'cheap'],
+  Chania: ['beach', 'cheap'],
+  Kos: ['beach', 'cheap'],
+  Zakynthos: ['beach', 'cheap'],
+  Thessaloniki: ['city', 'beach', 'cheap'],
 
   // Italian Cities
-  'Venice': ['city', 'luxury'],
-  'Milan': ['city', 'luxury'],
-  'Florence': ['city'],
-  'Naples': ['city', 'beach', 'cheap'],
-  'Bologna': ['city'],
-  'Turin': ['city', 'ski'],
-  'Verona': ['city'],
-  'Genoa': ['city'],
-  'Pisa': ['city'],
-  'Bergamo': ['city'],
+  Venice: ['city', 'luxury'],
+  Milan: ['city', 'luxury'],
+  Florence: ['city'],
+  Naples: ['city', 'beach', 'cheap'],
+  Bologna: ['city'],
+  Turin: ['city', 'ski'],
+  Verona: ['city'],
+  Genoa: ['city'],
+  Pisa: ['city'],
+  Bergamo: ['city'],
 
   // Italian Islands
-  'Catania': ['beach', 'cheap'],
-  'Palermo': ['city', 'beach', 'cheap'],
-  'Cagliari': ['beach', 'cheap'],
-  'Olbia': ['beach', 'cheap'],
-  'Bari': ['city', 'beach', 'cheap'],
-  'Brindisi': ['beach', 'cheap'],
+  Catania: ['beach', 'cheap'],
+  Palermo: ['city', 'beach', 'cheap'],
+  Cagliari: ['beach', 'cheap'],
+  Olbia: ['beach', 'cheap'],
+  Bari: ['city', 'beach', 'cheap'],
+  Brindisi: ['beach', 'cheap'],
 
   // French Cities
-  'Nice': ['beach', 'luxury'],
-  'Lyon': ['city'],
-  'Marseille': ['city', 'beach'],
-  'Bordeaux': ['city'],
-  'Toulouse': ['city'],
-  'Strasbourg': ['city'],
-  'Nantes': ['city'],
-  'Montpellier': ['city', 'beach'],
+  Nice: ['beach', 'luxury'],
+  Lyon: ['city'],
+  Marseille: ['city', 'beach'],
+  Bordeaux: ['city'],
+  Toulouse: ['city'],
+  Strasbourg: ['city'],
+  Nantes: ['city'],
+  Montpellier: ['city', 'beach'],
 
   // German Cities
-  'Munich': ['city'],
-  'Hamburg': ['city'],
-  'Frankfurt': ['city'],
-  'Cologne': ['city'],
-  'Dusseldorf': ['city'],
-  'Stuttgart': ['city'],
-  'Dresden': ['city'],
-  'Nuremberg': ['city'],
-  'Bremen': ['city'],
-  'Hannover': ['city'],
-  'Leipzig': ['city'],
+  Munich: ['city'],
+  Hamburg: ['city'],
+  Frankfurt: ['city'],
+  Cologne: ['city'],
+  Dusseldorf: ['city'],
+  Stuttgart: ['city'],
+  Dresden: ['city'],
+  Nuremberg: ['city'],
+  Bremen: ['city'],
+  Hannover: ['city'],
+  Leipzig: ['city'],
 
   // Eastern European Budget Cities
-  'Warsaw': ['city', 'cheap'],
-  'Krakow': ['city', 'cheap'],
-  'Gdansk': ['city', 'cheap'],
-  'Wroclaw': ['city', 'cheap'],
-  'Poznan': ['city', 'cheap'],
-  'Zagreb': ['city', 'cheap'],
-  'Belgrade': ['city', 'cheap'],
-  'Bucharest': ['city', 'cheap'],
-  'Sofia': ['city', 'cheap'],
-  'Riga': ['city', 'cheap'],
-  'Tallinn': ['city', 'cheap'],
-  'Vilnius': ['city', 'cheap'],
-  'Bratislava': ['city', 'cheap'],
-  'Ljubljana': ['city', 'cheap'],
-  'Sarajevo': ['city', 'cheap'],
-  'Skopje': ['city', 'cheap'],
-  'Tirana': ['city', 'cheap'],
+  Warsaw: ['city', 'cheap'],
+  Krakow: ['city', 'cheap'],
+  Gdansk: ['city', 'cheap'],
+  Wroclaw: ['city', 'cheap'],
+  Poznan: ['city', 'cheap'],
+  Zagreb: ['city', 'cheap'],
+  Belgrade: ['city', 'cheap'],
+  Bucharest: ['city', 'cheap'],
+  Sofia: ['city', 'cheap'],
+  Riga: ['city', 'cheap'],
+  Tallinn: ['city', 'cheap'],
+  Vilnius: ['city', 'cheap'],
+  Bratislava: ['city', 'cheap'],
+  Ljubljana: ['city', 'cheap'],
+  Sarajevo: ['city', 'cheap'],
+  Skopje: ['city', 'cheap'],
+  Tirana: ['city', 'cheap'],
 
   // Croatian Coast (beach + budget)
-  'Dubrovnik': ['beach', 'city'],
-  'Split': ['beach', 'cheap'],
-  'Zadar': ['beach', 'cheap'],
-  'Pula': ['beach', 'cheap'],
+  Dubrovnik: ['beach', 'city'],
+  Split: ['beach', 'cheap'],
+  Zadar: ['beach', 'cheap'],
+  Pula: ['beach', 'cheap'],
 
   // Ski Destinations
-  'Zurich': ['city', 'luxury', 'ski'],
-  'Geneva': ['city', 'luxury', 'ski'],
-  'Innsbruck': ['ski', 'city'],
-  'Salzburg': ['ski', 'city'],
-  'Grenoble': ['ski'],
-  'Chambery': ['ski'],
-  'Reykjavik': ['ski', 'luxury'],
+  Zurich: ['city', 'luxury', 'ski'],
+  Geneva: ['city', 'luxury', 'ski'],
+  Innsbruck: ['ski', 'city'],
+  Salzburg: ['ski', 'city'],
+  Grenoble: ['ski'],
+  Chambery: ['ski'],
+  Reykjavik: ['ski', 'luxury'],
 
   // Scandinavia
-  'Bergen': ['city', 'ski'],
-  'Tromso': ['ski'],
-  'Gothenburg': ['city'],
-  'Aarhus': ['city'],
-  'Turku': ['city'],
+  Bergen: ['city', 'ski'],
+  Tromso: ['ski'],
+  Gothenburg: ['city'],
+  Aarhus: ['city'],
+  Turku: ['city'],
 
   // Other Popular Destinations
-  'Luxembourg': ['city'],
-  'Malta': ['beach', 'cheap'],
-  'Eindhoven': ['city', 'cheap'],
-  'Rotterdam': ['city'],
-  'Antalya': ['beach', 'cheap'],
-  'Bodrum': ['beach', 'cheap'],
+  Luxembourg: ['city'],
+  Malta: ['beach', 'cheap'],
+  Eindhoven: ['city', 'cheap'],
+  Rotterdam: ['city'],
+  Antalya: ['beach', 'cheap'],
+  Bodrum: ['beach', 'cheap'],
 };
 
 // Get destination types for a city
-const getDestinationTypes = (cityName) => {
+const getDestinationTypes = cityName => {
   return destinationTypes[cityName] || ['city']; // Default to city if not found
 };
 
 export default function HolidayPlanner() {
   const [step, setStep] = useState(1);
-  const [travelers, setTravelers] = useState([{ id: 1, name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }]);
+  const [travelers, setTravelers] = useState([
+    {
+      id: 1,
+      name: '',
+      origin: '',
+      luggage: 'hand',
+      airports: [],
+      selectedAirport: '',
+      excludedAirports: [],
+    },
+  ]);
   const [tripType, setTripType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -779,8 +861,13 @@ export default function HolidayPlanner() {
   const [sortBy, setSortBy] = useState('avgPrice');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
-  const [surveyShown, setSurveyShown] = useState(false);
-  const [surveyData, setSurveyData] = useState({ wouldUse: '', wouldBook: '', email: '', feedback: '' });
+  const [_surveyShown, setSurveyShown] = useState(false);
+  const [surveyData, setSurveyData] = useState({
+    wouldUse: '',
+    wouldBook: '',
+    email: '',
+    feedback: '',
+  });
   const [surveySubmitted, setSurveySubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAnywhere, setShowAnywhere] = useState(false);
@@ -812,7 +899,7 @@ export default function HolidayPlanner() {
 
   // Listen for API call updates
   React.useEffect(() => {
-    const handleApiCallUpdate = (event) => {
+    const handleApiCallUpdate = event => {
       setApiCallStats(event.detail);
     };
 
@@ -822,7 +909,7 @@ export default function HolidayPlanner() {
 
   // Debug mode keyboard shortcut (Ctrl+Shift+D)
   React.useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = e => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         setDebugMode(prev => {
@@ -841,6 +928,7 @@ export default function HolidayPlanner() {
   React.useEffect(() => {
     return () => {
       // Clear all search debounce timeouts
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       Object.values(searchTimeoutRef.current).forEach(timeoutId => {
         if (timeoutId) clearTimeout(timeoutId);
       });
@@ -923,20 +1011,31 @@ export default function HolidayPlanner() {
     if (searchTimeoutRef.current[travelerId]) {
       clearTimeout(searchTimeoutRef.current[travelerId]);
     }
-    
+
     searchTimeoutRef.current[travelerId] = setTimeout(() => {
       searchAirportsForCity(travelerId, cityName);
     }, 800);
   };
 
   const addTraveler = useCallback(() => {
-    const newTravelers = [...travelers, { id: Date.now(), name: '', origin: '', luggage: 'hand', airports: [], selectedAirport: '', excludedAirports: [] }];
+    const newTravelers = [
+      ...travelers,
+      {
+        id: Date.now(),
+        name: '',
+        origin: '',
+        luggage: 'hand',
+        airports: [],
+        selectedAirport: '',
+        excludedAirports: [],
+      },
+    ];
     setTravelers(newTravelers);
     // Track traveler added
     trackTravelerModified('added', newTravelers.length);
   }, [travelers]);
 
-  const duplicateTraveler = (travelerToDuplicate) => {
+  const duplicateTraveler = travelerToDuplicate => {
     // Show modal to get name for duplicated traveler
     setDuplicateName(travelerToDuplicate.name ? `${travelerToDuplicate.name} (copy)` : '');
     setShowDuplicateModal(travelerToDuplicate);
@@ -948,7 +1047,7 @@ export default function HolidayPlanner() {
       const newTraveler = {
         ...showDuplicateModal,
         id: Date.now(),
-        name: duplicateName
+        name: duplicateName,
       };
       setTravelers([...travelers, newTraveler]);
       setShowDuplicateModal(null);
@@ -956,13 +1055,16 @@ export default function HolidayPlanner() {
     }
   };
 
-  const removeTraveler = useCallback((id) => {
-    if (travelers.length > 1) {
-      setShowRemoveConfirm(id);
-    }
-  }, [travelers.length]);
+  const removeTraveler = useCallback(
+    id => {
+      if (travelers.length > 1) {
+        setShowRemoveConfirm(id);
+      }
+    },
+    [travelers.length]
+  );
 
-  const confirmRemoveTraveler = (id) => {
+  const confirmRemoveTraveler = id => {
     const newTravelers = travelers.filter(t => t.id !== id);
     setTravelers(newTravelers);
     setShowRemoveConfirm(null);
@@ -971,7 +1073,9 @@ export default function HolidayPlanner() {
   };
 
   const updateTraveler = useCallback((id, field, value) => {
-    setTravelers(prevTravelers => prevTravelers.map(t => t.id === id ? { ...t, [field]: value } : t));
+    setTravelers(prevTravelers =>
+      prevTravelers.map(t => (t.id === id ? { ...t, [field]: value } : t))
+    );
   }, []);
 
   const handleOriginChange = (id, value) => {
@@ -982,7 +1086,7 @@ export default function HolidayPlanner() {
   };
 
   // Smart airport limiting: decide which airports to check for a traveler
-  const getAirportsToCheck = (traveler) => {
+  const getAirportsToCheck = traveler => {
     let airportsToCheck = traveler.airports || [];
 
     // Filter out excluded airports
@@ -1003,17 +1107,19 @@ export default function HolidayPlanner() {
     );
 
     if (isMajorHub) {
-      devLog(`    🏙️ ${traveler.origin} is a major hub - checking all ${airportsToCheck.length} airports`);
+      devLog(
+        `    🏙️ ${traveler.origin} is a major hub - checking all ${airportsToCheck.length} airports`
+      );
       return airportsToCheck;
     }
 
     // For non-hub cities, limit to 2-3 closest airports
-    const limitedAirports = airportsToCheck
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3);
+    const limitedAirports = airportsToCheck.sort((a, b) => a.distance - b.distance).slice(0, 3);
 
     if (limitedAirports.length < airportsToCheck.length) {
-      devLog(`    ✂️ Smart limiting: ${traveler.origin} - checking ${limitedAirports.length}/${airportsToCheck.length} airports`);
+      devLog(
+        `    ✂️ Smart limiting: ${traveler.origin} - checking ${limitedAirports.length}/${airportsToCheck.length} airports`
+      );
     }
 
     return limitedAirports;
@@ -1033,10 +1139,10 @@ export default function HolidayPlanner() {
   };
 
   // Calculate price metrics for a destination across all travelers
-  const calculateDestinationPrices = async (destinationCode) => {
+  const calculateDestinationPrices = async destinationCode => {
     try {
       devLog(`  💵 Calculating prices for ${destinationCode}...`);
-      const pricePromises = travelers.map(async (traveler) => {
+      const pricePromises = travelers.map(async traveler => {
         const airportsToCheck = getAirportsToCheck(traveler);
         if (airportsToCheck.length === 0) {
           devLog(`    ⚠️ ${traveler.name || traveler.origin}: No airports available`);
@@ -1046,8 +1152,15 @@ export default function HolidayPlanner() {
         const filters = getFlightFilters();
 
         // Search from selected airports for this traveler
-        const flightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
+        const flightSearches = airportsToCheck.map(async airport => {
+          const flights = await AmadeusAPI.searchFlights(
+            airport.code,
+            destinationCode,
+            dateFrom,
+            1,
+            dateTo,
+            filters
+          );
           devLog(`    ${airport.code} -> ${destinationCode}: ${flights.length} flights`);
           if (flights.length === 0) return null;
 
@@ -1059,7 +1172,10 @@ export default function HolidayPlanner() {
 
           return {
             price: parseFloat(cheapest.price.total),
-            weightedScore: calculateWeightedScore(parseFloat(cheapest.price.total), airport.distance)
+            weightedScore: calculateWeightedScore(
+              parseFloat(cheapest.price.total),
+              airport.distance
+            ),
           };
         });
 
@@ -1091,10 +1207,12 @@ export default function HolidayPlanner() {
         avgPrice: Math.round(validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length),
         minPrice: Math.round(Math.min(...validPrices)),
         maxPrice: Math.round(Math.max(...validPrices)),
-        deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices))
+        deviation: Math.round(Math.max(...validPrices) - Math.min(...validPrices)),
       };
 
-      devLog(`  ✅ ${destinationCode}: avg £${result.avgPrice}, range £${result.minPrice}-£${result.maxPrice}`);
+      devLog(
+        `  ✅ ${destinationCode}: avg £${result.avgPrice}, range £${result.minPrice}-£${result.maxPrice}`
+      );
       return result;
     } catch (err) {
       devError(`❌ Error calculating prices for ${destinationCode}:`, err);
@@ -1146,7 +1264,7 @@ export default function HolidayPlanner() {
           // Removed .slice(0, 30) to show ALL destinations from ALL origin airports
           .map(([code, data]) => ({
             code,
-            ...data
+            ...data,
           }));
 
         devLog('✅ Found destinations:', topDestinations);
@@ -1154,8 +1272,10 @@ export default function HolidayPlanner() {
         // Get city names and calculate price metrics for each destination
         devLog('💰 Calculating price metrics for destinations...');
         const destinationsWithPrices = await Promise.all(
-          topDestinations.map(async (dest) => {
-            const cityName = Object.entries(destinationAirportMap).find(([city, code]) => code === dest.code)?.[0];
+          topDestinations.map(async dest => {
+            const cityName = Object.entries(destinationAirportMap).find(
+              ([_city, code]) => code === dest.code
+            )?.[0];
             const priceMetrics = await calculateDestinationPrices(dest.code);
 
             if (!priceMetrics) return null;
@@ -1165,7 +1285,7 @@ export default function HolidayPlanner() {
               code: dest.code,
               count: dest.count,
               types: cityName ? getDestinationTypes(cityName) : ['city'],
-              ...priceMetrics
+              ...priceMetrics,
             };
           })
         );
@@ -1184,19 +1304,27 @@ export default function HolidayPlanner() {
   };
 
   // Get color scheme for traveler cards
-  const getTravelerColor = (index) => {
+  const getTravelerColor = index => {
     const colors = [
-      { border: 'border-purple-400', bg: 'bg-purple-50', gradient: 'from-purple-400 to-purple-600' },
+      {
+        border: 'border-purple-400',
+        bg: 'bg-purple-50',
+        gradient: 'from-purple-400 to-purple-600',
+      },
       { border: 'border-pink-400', bg: 'bg-pink-50', gradient: 'from-pink-400 to-pink-600' },
       { border: 'border-blue-400', bg: 'bg-blue-50', gradient: 'from-blue-400 to-blue-600' },
       { border: 'border-green-400', bg: 'bg-green-50', gradient: 'from-green-400 to-green-600' },
-      { border: 'border-orange-400', bg: 'bg-orange-50', gradient: 'from-orange-400 to-orange-600' },
+      {
+        border: 'border-orange-400',
+        bg: 'bg-orange-50',
+        gradient: 'from-orange-400 to-orange-600',
+      },
       { border: 'border-teal-400', bg: 'bg-teal-50', gradient: 'from-teal-400 to-teal-600' },
     ];
     return colors[index % colors.length];
   };
 
-  const searchFlightsForDestination = async (destinationCity) => {
+  const searchFlightsForDestination = async destinationCity => {
     setLoading(true);
     setError(null);
     setSurveyShown(false); // Reset survey state for new search
@@ -1223,9 +1351,12 @@ export default function HolidayPlanner() {
       const filters = getFlightFilters();
 
       // Search flights for each traveler from selected nearby airports
-      const flightPromises = travelers.map(async (traveler) => {
+      const flightPromises = travelers.map(async traveler => {
         const airportsToCheck = getAirportsToCheck(traveler);
-        devLog(`👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`, airportsToCheck);
+        devLog(
+          `👤 ${traveler.name || traveler.origin}: Checking ${airportsToCheck.length} airports`,
+          airportsToCheck
+        );
 
         if (airportsToCheck.length === 0) {
           devWarn(`⚠️ No airports available for ${traveler.name || traveler.origin}`);
@@ -1233,15 +1364,22 @@ export default function HolidayPlanner() {
         }
 
         // Search from selected airports
-        const allFlightSearches = airportsToCheck.map(async (airport) => {
-          const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, filters);
+        const allFlightSearches = airportsToCheck.map(async airport => {
+          const flights = await AmadeusAPI.searchFlights(
+            airport.code,
+            destinationCode,
+            dateFrom,
+            1,
+            dateTo,
+            filters
+          );
           devLog(`  ✈️ ${airport.code} -> ${destinationCode}: ${flights.length} flights found`);
 
           // Add airport info and weighted score to each flight
           return flights.map(flight => ({
             ...flight,
             departureAirport: airport,
-            weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance)
+            weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance),
           }));
         });
 
@@ -1253,17 +1391,31 @@ export default function HolidayPlanner() {
 
         // Fallback: If no direct flights found and direct filter was active, try with connecting flights
         if (allFlights.length === 0 && filters.nonStop) {
-          devWarn(`  ⚠️ No direct flights found for ${traveler.name || traveler.origin}, trying connecting flights...`);
+          devWarn(
+            `  ⚠️ No direct flights found for ${traveler.name || traveler.origin}, trying connecting flights...`
+          );
 
           const fallbackFilters = { ...filters, nonStop: false };
-          const fallbackSearches = airportsToCheck.map(async (airport) => {
-            const flights = await AmadeusAPI.searchFlights(airport.code, destinationCode, dateFrom, 1, dateTo, fallbackFilters);
-            devLog(`  🔄 ${airport.code} -> ${destinationCode} (connecting): ${flights.length} flights found`);
+          const fallbackSearches = airportsToCheck.map(async airport => {
+            const flights = await AmadeusAPI.searchFlights(
+              airport.code,
+              destinationCode,
+              dateFrom,
+              1,
+              dateTo,
+              fallbackFilters
+            );
+            devLog(
+              `  🔄 ${airport.code} -> ${destinationCode} (connecting): ${flights.length} flights found`
+            );
 
             return flights.map(flight => ({
               ...flight,
               departureAirport: airport,
-              weightedScore: calculateWeightedScore(parseFloat(flight.price.total), airport.distance)
+              weightedScore: calculateWeightedScore(
+                parseFloat(flight.price.total),
+                airport.distance
+              ),
             }));
           });
 
@@ -1271,7 +1423,10 @@ export default function HolidayPlanner() {
           allFlights = fallbackResults.flat().filter(f => f);
           usedFallback = true;
 
-          devLog(`  📊 Total connecting flights for ${traveler.name || traveler.origin}:`, allFlights.length);
+          devLog(
+            `  📊 Total connecting flights for ${traveler.name || traveler.origin}:`,
+            allFlights.length
+          );
         }
 
         if (allFlights.length === 0) {
@@ -1287,7 +1442,7 @@ export default function HolidayPlanner() {
           flights: sortedFlights.slice(0, 5), // Top 5 options
           cheapest: sortedFlights[0], // Best weighted option
           allAirportOptions: airportsToCheck.length,
-          usedFallback // Flag to indicate connecting flights shown instead of direct
+          usedFallback, // Flag to indicate connecting flights shown instead of direct
         };
       });
 
@@ -1301,7 +1456,13 @@ export default function HolidayPlanner() {
         }
       });
 
-      devLog('✅ Flight search complete. Found flights for', foundFlights, 'out of', travelers.length, 'travelers');
+      devLog(
+        '✅ Flight search complete. Found flights for',
+        foundFlights,
+        'out of',
+        travelers.length,
+        'travelers'
+      );
       devLog('📦 Flight data:', flightMap);
 
       // Collect debug information
@@ -1322,18 +1483,20 @@ export default function HolidayPlanner() {
           hasFlights: !!flightMap[t.id],
           flightCount: flightMap[t.id]?.flights?.length || 0,
           cheapestPrice: flightMap[t.id]?.cheapest?.price?.total || 'N/A',
-          itineraries: flightMap[t.id]?.cheapest?.itineraries?.length || 0
-        }))
+          itineraries: flightMap[t.id]?.cheapest?.itineraries?.length || 0,
+        })),
       };
       setDebugInfo(debug);
 
       if (foundFlights === 0) {
-        setError('No flights found for the selected date and destination. Try a different date or destination.');
+        setError(
+          'No flights found for the selected date and destination. Try a different date or destination.'
+        );
         // Track search failed - no results
         trackSearchFailed('no_results', {
           destination: destinationCity,
           travelers: travelers.length,
-          date: dateFrom
+          date: dateFrom,
         });
       } else {
         // Track successful results loaded
@@ -1359,7 +1522,7 @@ export default function HolidayPlanner() {
       trackSearchFailed('api_error', {
         destination: destinationCity,
         error: err.message,
-        travelers: travelers.length
+        travelers: travelers.length,
       });
     } finally {
       setLoading(false);
@@ -1384,39 +1547,43 @@ export default function HolidayPlanner() {
   };
 
   const calculateFairnessScore = () => {
-    const costs = travelers.map(t => {
-      const data = flightData[t.id];
-      if (data && data.cheapest) {
-        return parseFloat(data.cheapest.price.total);
-      }
-      return 0;
-    }).filter(c => c > 0);
+    const costs = travelers
+      .map(t => {
+        const data = flightData[t.id];
+        if (data && data.cheapest) {
+          return parseFloat(data.cheapest.price.total);
+        }
+        return 0;
+      })
+      .filter(c => c > 0);
 
     if (costs.length === 0) return 0;
 
     const avg = costs.reduce((s, c) => s + c, 0) / costs.length;
     const maxDiff = Math.max(...costs.map(c => Math.abs(c - avg)));
-    return Math.round(Math.max(0, 100 - (maxDiff / avg * 100)));
+    return Math.round(Math.max(0, 100 - (maxDiff / avg) * 100));
   };
 
   const getFairnessDetails = () => {
     const dest = selectedDestination || customDestination;
     if (!showResults || !dest) return null;
 
-    const costs = travelers.map(t => {
-      const data = flightData[t.id];
-      if (!data || !data.cheapest) return null;
-      
-      const price = parseFloat(data.cheapest.price.total);
-      const airport = data.cheapest.departureAirport;
-      
-      return {
-        name: t.name || `From ${t.origin}`,
-        cost: price,
-        airport: `${airport.name} (${airport.code})`,
-        distance: airport.distance
-      };
-    }).filter(c => c !== null);
+    const costs = travelers
+      .map(t => {
+        const data = flightData[t.id];
+        if (!data || !data.cheapest) return null;
+
+        const price = parseFloat(data.cheapest.price.total);
+        const airport = data.cheapest.departureAirport;
+
+        return {
+          name: t.name || `From ${t.origin}`,
+          cost: price,
+          airport: `${airport.name} (${airport.code})`,
+          distance: airport.distance,
+        };
+      })
+      .filter(c => c !== null);
 
     if (costs.length === 0) return null;
 
@@ -1425,7 +1592,7 @@ export default function HolidayPlanner() {
     return {
       score: calculateFairnessScore(),
       travelers: costs.map(c => ({ ...c, diffFromAvg: c.cost - avg })),
-      avgCost: Math.round(avg)
+      avgCost: Math.round(avg),
     };
   };
 
@@ -1463,12 +1630,23 @@ export default function HolidayPlanner() {
     return filtered;
   };
 
-  const destinationsToShow = useMemo(() => getSortedDestinations(), [availableDestinations, tripType, sortBy]);
+   
+  const destinationsToShow = useMemo(
+    () => getSortedDestinations(),
+    [availableDestinations, tripType, sortBy]
+  );
 
   const destination = selectedDestination || customDestination;
-  const fairness = useMemo(() => getFairnessDetails(), [showResults, selectedDestination, customDestination, flightData, travelers]);
+   
+  const fairness = useMemo(
+    () => getFairnessDetails(),
+    [showResults, selectedDestination, customDestination, flightData, travelers]
+  );
 
-  const canProceed = useMemo(() => travelers.every(t => t.selectedAirport) && dateFrom, [travelers, dateFrom]);
+  const canProceed = useMemo(
+    () => travelers.every(t => t.selectedAirport) && dateFrom,
+    [travelers, dateFrom]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-3 sm:p-6 pb-20">
@@ -1476,7 +1654,9 @@ export default function HolidayPlanner() {
         <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Plane className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-float" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Squad Flight Finder</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Squad Flight Finder
+            </h1>
           </div>
           <p className="text-white/90 text-xs sm:text-sm">Find the fairest meeting spot</p>
           {debugMode && (
@@ -1509,7 +1689,8 @@ export default function HolidayPlanner() {
                   Budget per Person
                 </h2>
                 <p className="text-sm text-gray-600 mb-3">
-                  This is a guide for destination filtering. Flight prices within your budget will be prioritized.
+                  This is a guide for destination filtering. Flight prices within your budget will
+                  be prioritized.
                 </p>
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-2xl border-2 border-purple-200">
                   <div className="flex items-center justify-between mb-3">
@@ -1517,7 +1698,7 @@ export default function HolidayPlanner() {
                     <input
                       type="number"
                       value={maxBudget}
-                      onChange={(e) => setMaxBudget(parseInt(e.target.value) || 30)}
+                      onChange={e => setMaxBudget(parseInt(e.target.value) || 30)}
                       min="30"
                       max="500"
                       className="w-20 px-2 py-1 border-2 border-purple-300 rounded-lg text-sm font-bold text-purple-600 text-center focus:border-purple-400 focus:outline-none"
@@ -1528,7 +1709,7 @@ export default function HolidayPlanner() {
                     min="30"
                     max="500"
                     value={maxBudget}
-                    onChange={(e) => setMaxBudget(parseInt(e.target.value))}
+                    onChange={e => setMaxBudget(parseInt(e.target.value))}
                     className="w-full h-2 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full appearance-none cursor-pointer slider"
                   />
                   <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -1546,26 +1727,32 @@ export default function HolidayPlanner() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Departure Date</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Departure Date
+                    </label>
                     <input
                       type="date"
                       value={dateFrom}
                       min={new Date().toISOString().split('T')[0]}
-                      onChange={(e) => setDateFrom(e.target.value)}
+                      onChange={e => setDateFrom(e.target.value)}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Return Date <span className="text-gray-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Return Date <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
                     <input
                       type="date"
                       value={dateTo}
                       min={dateFrom || new Date().toISOString().split('T')[0]}
-                      onChange={(e) => setDateTo(e.target.value)}
+                      onChange={e => setDateTo(e.target.value)}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                     />
                     <p className="text-xs text-gray-500">
-                      {dateTo ? '✓ Prices will show total round-trip cost' : 'Leave empty for one-way flights'}
+                      {dateTo
+                        ? '✓ Prices will show total round-trip cost'
+                        : 'Leave empty for one-way flights'}
                     </p>
                   </div>
                 </div>
@@ -1583,7 +1770,7 @@ export default function HolidayPlanner() {
                     <input
                       type="checkbox"
                       checked={directFlightsOnly}
-                      onChange={(e) => {
+                      onChange={e => {
                         setDirectFlightsOnly(e.target.checked);
                         if (e.target.checked) setMaxStops(null);
                       }}
@@ -1600,10 +1787,14 @@ export default function HolidayPlanner() {
                   {/* Max Stops */}
                   {!directFlightsOnly && (
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-gray-700">Maximum Stops</label>
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Maximum Stops
+                      </label>
                       <select
                         value={maxStops === null ? 'any' : maxStops}
-                        onChange={(e) => setMaxStops(e.target.value === 'any' ? null : parseInt(e.target.value))}
+                        onChange={e =>
+                          setMaxStops(e.target.value === 'any' ? null : parseInt(e.target.value))
+                        }
                         className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all bg-white"
                       >
                         <option value="any">Any number of stops</option>
@@ -1619,7 +1810,7 @@ export default function HolidayPlanner() {
                     <input
                       type="checkbox"
                       checked={checkAllAirports}
-                      onChange={(e) => setCheckAllAirports(e.target.checked)}
+                      onChange={e => setCheckAllAirports(e.target.checked)}
                       className="w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                     />
                     <div className="flex-1">
@@ -1640,9 +1831,13 @@ export default function HolidayPlanner() {
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-600 font-medium">API Calls:</span>
                         <div className="flex gap-3">
-                          <span className="text-blue-600 font-bold">{apiCallStats.total} total</span>
+                          <span className="text-blue-600 font-bold">
+                            {apiCallStats.total} total
+                          </span>
                           {apiCallStats.cacheHits > 0 && (
-                            <span className="text-green-600 font-bold">✓ {apiCallStats.cacheHits} cached</span>
+                            <span className="text-green-600 font-bold">
+                              ✓ {apiCallStats.cacheHits} cached
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1680,7 +1875,9 @@ export default function HolidayPlanner() {
                       >
                         {/* Card Header */}
                         <div className="flex items-center justify-between mb-3">
-                          <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-xs`}>
+                          <div
+                            className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-xs`}
+                          >
                             {t.name || `Person ${i + 1}`}
                           </div>
                           <div className="flex gap-2">
@@ -1710,7 +1907,7 @@ export default function HolidayPlanner() {
                             type="text"
                             placeholder="Name (optional)"
                             value={t.name}
-                            onChange={(e) => updateTraveler(t.id, 'name', e.target.value)}
+                            onChange={e => updateTraveler(t.id, 'name', e.target.value)}
                             className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                           />
                           <div>
@@ -1718,7 +1915,7 @@ export default function HolidayPlanner() {
                               type="text"
                               placeholder="City name (e.g., London, Paris, New York)"
                               value={t.origin}
-                              onChange={(e) => handleOriginChange(t.id, e.target.value)}
+                              onChange={e => handleOriginChange(t.id, e.target.value)}
                               className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all"
                             />
                             {!t.origin && (
@@ -1741,45 +1938,67 @@ export default function HolidayPlanner() {
                             <div className="bg-white border-2 border-green-300 rounded-xl p-2">
                               <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1">
                                 <MapPin className="w-3 h-3" />
-                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found - Check to include:
+                                {t.airports.length} airport{t.airports.length > 1 ? 's' : ''} found
+                                - Check to include:
                               </p>
                               <div className="text-xs text-gray-700 space-y-1.5">
-                                {t.airports.map((a) => {
-                                  const isExcluded = t.excludedAirports && t.excludedAirports.includes(a.code);
+                                {t.airports.map(a => {
+                                  const isExcluded =
+                                    t.excludedAirports && t.excludedAirports.includes(a.code);
                                   return (
-                                    <label key={a.code} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <label
+                                      key={a.code}
+                                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                    >
                                       <input
                                         type="checkbox"
                                         checked={!isExcluded}
-                                        onChange={(e) => {
+                                        onChange={e => {
                                           const excluded = t.excludedAirports || [];
                                           if (e.target.checked) {
                                             // Remove from excluded list
-                                            updateTraveler(t.id, 'excludedAirports', excluded.filter(code => code !== a.code));
+                                            updateTraveler(
+                                              t.id,
+                                              'excludedAirports',
+                                              excluded.filter(code => code !== a.code)
+                                            );
                                           } else {
                                             // Prevent unchecking the last airport - at least one must remain selected
-                                            const currentlyIncluded = t.airports.filter(airport => !excluded.includes(airport.code));
+                                            const currentlyIncluded = t.airports.filter(
+                                              airport => !excluded.includes(airport.code)
+                                            );
                                             if (currentlyIncluded.length <= 1) {
                                               // Don't allow unchecking the last airport
                                               return;
                                             }
                                             // Add to excluded list
-                                            updateTraveler(t.id, 'excludedAirports', [...excluded, a.code]);
+                                            updateTraveler(t.id, 'excludedAirports', [
+                                              ...excluded,
+                                              a.code,
+                                            ]);
 
                                             // If we're excluding the currently selected airport, update selectedAirport to the first non-excluded one
                                             if (t.selectedAirport === a.code) {
-                                              const remainingAirports = t.airports.filter(airport =>
-                                                airport.code !== a.code && !excluded.includes(airport.code)
+                                              const remainingAirports = t.airports.filter(
+                                                airport =>
+                                                  airport.code !== a.code &&
+                                                  !excluded.includes(airport.code)
                                               );
                                               if (remainingAirports.length > 0) {
-                                                updateTraveler(t.id, 'selectedAirport', remainingAirports[0].code);
+                                                updateTraveler(
+                                                  t.id,
+                                                  'selectedAirport',
+                                                  remainingAirports[0].code
+                                                );
                                               }
                                             }
                                           }
                                         }}
                                         className="w-3.5 h-3.5 text-green-600 rounded border-gray-300"
                                       />
-                                      <span className="flex-1">{a.name} ({a.code})</span>
+                                      <span className="flex-1">
+                                        {a.name} ({a.code})
+                                      </span>
                                       <span className="text-gray-500">{a.distance}mi</span>
                                     </label>
                                   );
@@ -1790,11 +2009,12 @@ export default function HolidayPlanner() {
 
                           <div>
                             <label className="block text-xs font-semibold text-gray-700 mb-1">
-                              Luggage <span className="text-gray-500 font-normal">(affects price)</span>
+                              Luggage{' '}
+                              <span className="text-gray-500 font-normal">(affects price)</span>
                             </label>
                             <select
                               value={t.luggage}
-                              onChange={(e) => updateTraveler(t.id, 'luggage', e.target.value)}
+                              onChange={e => updateTraveler(t.id, 'luggage', e.target.value)}
                               className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-purple-400 focus:outline-none transition-all bg-white"
                             >
                               <option value="hand">Hand bag only (cheapest)</option>
@@ -1824,8 +2044,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Globe className={`w-5 h-5 mx-auto mb-1 ${tripType === 'all' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'all' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Globe
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'all' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'all' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       All
                     </p>
                   </button>
@@ -1837,8 +2061,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Briefcase className={`w-5 h-5 mx-auto mb-1 ${tripType === 'city' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'city' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Briefcase
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'city' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'city' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       City
                     </p>
                   </button>
@@ -1850,8 +2078,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Palmtree className={`w-5 h-5 mx-auto mb-1 ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Palmtree
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'beach' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       Beach
                     </p>
                   </button>
@@ -1863,8 +2095,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Mountain className={`w-5 h-5 mx-auto mb-1 ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Mountain
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'ski' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       Ski
                     </p>
                   </button>
@@ -1876,8 +2112,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Coffee className={`w-5 h-5 mx-auto mb-1 ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Coffee
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'cheap' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       Budget
                     </p>
                   </button>
@@ -1889,8 +2129,12 @@ export default function HolidayPlanner() {
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <Gem className={`w-5 h-5 mx-auto mb-1 ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-400'}`} />
-                    <p className={`text-xs font-bold ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-600'}`}>
+                    <Gem
+                      className={`w-5 h-5 mx-auto mb-1 ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-400'}`}
+                    />
+                    <p
+                      className={`text-xs font-bold ${tripType === 'luxury' ? 'text-purple-600' : 'text-gray-600'}`}
+                    >
                       Luxury
                     </p>
                   </button>
@@ -1908,7 +2152,9 @@ export default function HolidayPlanner() {
                     {airportSearchLog.map((log, idx) => (
                       <div key={idx} className="bg-white rounded-lg p-3 text-xs">
                         <p className="font-semibold text-gray-800">City: "{log.cityName}"</p>
-                        <p className={`${log.airports ? 'text-green-700' : 'text-red-700'} font-medium`}>
+                        <p
+                          className={`${log.airports ? 'text-green-700' : 'text-red-700'} font-medium`}
+                        >
                           {log.result}
                         </p>
                         {log.airports && (
@@ -1976,24 +2222,30 @@ export default function HolidayPlanner() {
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-600">Ranked by price - find the best deal for your squad</p>
+                  <p className="text-gray-600">
+                    Ranked by price - find the best deal for your squad
+                  </p>
                   {loadingDestinations && (
                     <div className="mt-4 flex items-center justify-center gap-2 text-sm text-purple-600">
                       <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
                       Calculating prices for all destinations...
                     </div>
                   )}
-                  {!loadingDestinations && availableDestinations.length > 0 && tripType !== 'all' && (
-                    <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
-                      <span>Filtering: {tripType.charAt(0).toUpperCase() + tripType.slice(1)}</span>
-                      <button
-                        onClick={() => setTripType('all')}
-                        className="hover:bg-purple-200 rounded-full p-1 transition-all"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                  {!loadingDestinations &&
+                    availableDestinations.length > 0 &&
+                    tripType !== 'all' && (
+                      <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                        <span>
+                          Filtering: {tripType.charAt(0).toUpperCase() + tripType.slice(1)}
+                        </span>
+                        <button
+                          onClick={() => setTripType('all')}
+                          className="hover:bg-purple-200 rounded-full p-1 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                 </div>
 
                 {/* Sorting Controls */}
@@ -2006,7 +2258,8 @@ export default function HolidayPlanner() {
                       </label>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">
-                      Choose how to rank destinations: average cost across all travelers, fairness (smallest price difference), or cheapest individual ticket
+                      Choose how to rank destinations: average cost across all travelers, fairness
+                      (smallest price difference), or cheapest individual ticket
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       <button
@@ -2018,8 +2271,12 @@ export default function HolidayPlanner() {
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <DollarSign className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-400'}`} />
-                        <p className={`text-xs font-bold ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-600'}`}>
+                        <DollarSign
+                          className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-400'}`}
+                        />
+                        <p
+                          className={`text-xs font-bold ${sortBy === 'avgPrice' ? 'text-purple-600' : 'text-gray-600'}`}
+                        >
                           Avg Price
                         </p>
                       </button>
@@ -2032,8 +2289,12 @@ export default function HolidayPlanner() {
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <Scale className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-400'}`} />
-                        <p className={`text-xs font-bold ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-600'}`}>
+                        <Scale
+                          className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-400'}`}
+                        />
+                        <p
+                          className={`text-xs font-bold ${sortBy === 'deviation' ? 'text-purple-600' : 'text-gray-600'}`}
+                        >
                           Fairness
                         </p>
                       </button>
@@ -2046,8 +2307,12 @@ export default function HolidayPlanner() {
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <TrendingDown className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-400'}`} />
-                        <p className={`text-xs font-bold ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-600'}`}>
+                        <TrendingDown
+                          className={`w-5 h-5 mx-auto mb-1 ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-400'}`}
+                        />
+                        <p
+                          className={`text-xs font-bold ${sortBy === 'minPrice' ? 'text-purple-600' : 'text-gray-600'}`}
+                        >
                           Cheapest
                         </p>
                       </button>
@@ -2070,9 +2335,15 @@ export default function HolidayPlanner() {
                           : 'border-gray-300 bg-gradient-to-r from-purple-50 to-pink-50 hover:border-purple-300'
                       }`}
                     >
-                      <Globe className={`w-5 h-5 ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`} />
-                      <span className={`font-bold ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}>
-                        {showAnywhere ? 'Showing All Destinations' : 'Show All Destinations (Anywhere)'}
+                      <Globe
+                        className={`w-5 h-5 ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}
+                      />
+                      <span
+                        className={`font-bold ${showAnywhere ? 'text-orange-600' : 'text-purple-600'}`}
+                      >
+                        {showAnywhere
+                          ? 'Showing All Destinations'
+                          : 'Show All Destinations (Anywhere)'}
                       </span>
                     </button>
                   </div>
@@ -2081,93 +2352,104 @@ export default function HolidayPlanner() {
                 {/* Destination Cards Grid */}
                 {!loadingDestinations && availableDestinations.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                    {destinationsToShow.slice(0, showAnywhere ? destinationsToShow.length : 12).map((d) => (
-                      <button
-                        key={d.code}
-                        onClick={() => {
-                          setSelectedDestination(d.city);
-                          setCustomDestination('');
-                        }}
-                        className={`group relative p-4 rounded-2xl border-2 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
-                          selectedDestination === d.city
-                            ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
-                            : 'border-gray-200 bg-white hover:border-pink-300'
-                        }`}
-                      >
-                        {/* City Icon */}
-                        <div
-                          className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center transition-all ${
+                    {destinationsToShow
+                      .slice(0, showAnywhere ? destinationsToShow.length : 12)
+                      .map(d => (
+                        <button
+                          key={d.code}
+                          onClick={() => {
+                            setSelectedDestination(d.city);
+                            setCustomDestination('');
+                          }}
+                          className={`group relative p-4 rounded-2xl border-2 text-left transition-all transform hover:scale-105 hover:shadow-2xl ${
                             selectedDestination === d.city
-                              ? 'bg-gradient-to-r from-pink-500 to-purple-500'
-                              : 'bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-pink-400 group-hover:to-purple-400'
+                              ? 'border-pink-500 bg-gradient-to-br from-pink-50 to-purple-50 shadow-xl'
+                              : 'border-gray-200 bg-white hover:border-pink-300'
                           }`}
                         >
-                          <MapPin className="w-5 h-5 text-white" />
-                        </div>
-
-                        {/* City Name */}
-                        <p className="font-bold text-sm mb-2 text-gray-800">{d.city}</p>
-
-                        {/* Trip Type Badge */}
-                        <div className="mb-2">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
-                            {dateTo ? '↔ Round-trip' : '→ One-way'}
-                          </span>
-                        </div>
-
-                        {/* Price Metrics */}
-                        <div className="space-y-1 mb-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Avg:</span>
-                            <span className="font-bold text-purple-600">£{d.avgPrice}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Range:</span>
-                            <span className="font-semibold text-gray-700">£{d.minPrice}-£{d.maxPrice}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Diff:</span>
-                            <span className={`font-bold ${d.deviation < 50 ? 'text-green-600' : d.deviation < 100 ? 'text-yellow-600' : 'text-red-600'}`}>
-                              £{d.deviation}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Type and Fairness Badges */}
-                        <div className="flex flex-wrap gap-1">
-                          {d.types && d.types.slice(0, 2).map((type) => (
-                            <span
-                              key={type}
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                                selectedDestination === d.city
-                                  ? 'bg-purple-200 text-purple-700'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {type}
-                            </span>
-                          ))}
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                              d.deviation < 50
-                                ? 'bg-green-100 text-green-700'
-                                : d.deviation < 100
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-red-100 text-red-700'
+                          {/* City Icon */}
+                          <div
+                            className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center transition-all ${
+                              selectedDestination === d.city
+                                ? 'bg-gradient-to-r from-pink-500 to-purple-500'
+                                : 'bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-pink-400 group-hover:to-purple-400'
                             }`}
                           >
-                            {d.deviation < 50 ? 'Very Fair' : d.deviation < 100 ? 'Fair' : 'Uneven'}
-                          </span>
-                        </div>
-
-                        {/* Selected Checkmark */}
-                        {selectedDestination === d.city && (
-                          <div className="absolute top-3 right-3 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
+                            <MapPin className="w-5 h-5 text-white" />
                           </div>
-                        )}
-                      </button>
-                    ))}
+
+                          {/* City Name */}
+                          <p className="font-bold text-sm mb-2 text-gray-800">{d.city}</p>
+
+                          {/* Trip Type Badge */}
+                          <div className="mb-2">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
+                              {dateTo ? '↔ Round-trip' : '→ One-way'}
+                            </span>
+                          </div>
+
+                          {/* Price Metrics */}
+                          <div className="space-y-1 mb-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Avg:</span>
+                              <span className="font-bold text-purple-600">£{d.avgPrice}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Range:</span>
+                              <span className="font-semibold text-gray-700">
+                                £{d.minPrice}-£{d.maxPrice}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Diff:</span>
+                              <span
+                                className={`font-bold ${d.deviation < 50 ? 'text-green-600' : d.deviation < 100 ? 'text-yellow-600' : 'text-red-600'}`}
+                              >
+                                £{d.deviation}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Type and Fairness Badges */}
+                          <div className="flex flex-wrap gap-1">
+                            {d.types &&
+                              d.types.slice(0, 2).map(type => (
+                                <span
+                                  key={type}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                    selectedDestination === d.city
+                                      ? 'bg-purple-200 text-purple-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {type}
+                                </span>
+                              ))}
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                d.deviation < 50
+                                  ? 'bg-green-100 text-green-700'
+                                  : d.deviation < 100
+                                    ? 'bg-yellow-100 text-yellow-700'
+                                    : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {d.deviation < 50
+                                ? 'Very Fair'
+                                : d.deviation < 100
+                                  ? 'Fair'
+                                  : 'Uneven'}
+                            </span>
+                          </div>
+
+                          {/* Selected Checkmark */}
+                          {selectedDestination === d.city && (
+                            <div className="absolute top-3 right-3 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
                   </div>
                 )}
 
@@ -2175,8 +2457,12 @@ export default function HolidayPlanner() {
                 {!loadingDestinations && availableDestinations.length === 0 && (
                   <div className="text-center py-8 bg-yellow-50 rounded-2xl border-2 border-yellow-200 mb-6">
                     <Info className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-                    <p className="text-gray-700 font-semibold">No destinations found with pricing data</p>
-                    <p className="text-sm text-gray-600 mt-2">Try entering a custom destination below</p>
+                    <p className="text-gray-700 font-semibold">
+                      No destinations found with pricing data
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Try entering a custom destination below
+                    </p>
                   </div>
                 )}
 
@@ -2189,7 +2475,7 @@ export default function HolidayPlanner() {
                     type="text"
                     placeholder="e.g., Reykjavik, Athens, Venice..."
                     value={customDestination}
-                    onChange={(e) => {
+                    onChange={e => {
                       setCustomDestination(e.target.value);
                       setSelectedDestination('');
                     }}
@@ -2230,12 +2516,21 @@ export default function HolidayPlanner() {
                     <div className="space-y-2 text-sm">
                       {airportSearchLog.length > 0 && (
                         <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3">
-                          <p className="font-semibold text-yellow-900 mb-2">Airport Search Log ({airportSearchLog.length} searches):</p>
+                          <p className="font-semibold text-yellow-900 mb-2">
+                            Airport Search Log ({airportSearchLog.length} searches):
+                          </p>
                           {airportSearchLog.map((log, idx) => (
-                            <div key={idx} className="text-xs mb-2 pb-2 border-b border-yellow-200 last:border-0">
+                            <div
+                              key={idx}
+                              className="text-xs mb-2 pb-2 border-b border-yellow-200 last:border-0"
+                            >
                               <p className="font-semibold">City: "{log.cityName}"</p>
-                              <p className={log.airports ? 'text-green-700' : 'text-red-700'}>{log.result}</p>
-                              {log.airports && <p className="text-gray-600">Airports: {log.airports}</p>}
+                              <p className={log.airports ? 'text-green-700' : 'text-red-700'}>
+                                {log.result}
+                              </p>
+                              {log.airports && (
+                                <p className="text-gray-600">Airports: {log.airports}</p>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -2243,26 +2538,49 @@ export default function HolidayPlanner() {
 
                       <div className="bg-white rounded-lg p-3">
                         <p className="font-semibold text-gray-700">Search Details:</p>
-                        <p className="text-gray-600">Destination: {debugInfo.destination} ({debugInfo.destinationCode})</p>
+                        <p className="text-gray-600">
+                          Destination: {debugInfo.destination} ({debugInfo.destinationCode})
+                        </p>
                         <p className="text-gray-600">Outbound: {debugInfo.dateFrom}</p>
-                        {debugInfo.dateTo && <p className="text-gray-600">Return: {debugInfo.dateTo}</p>}
-                        <p className="text-gray-600">Trip type: <span className="font-semibold">{debugInfo.tripType}</span></p>
-                        <p className="text-gray-600">Found flights for: {debugInfo.foundFlights}/{debugInfo.totalTravelers} travelers</p>
+                        {debugInfo.dateTo && (
+                          <p className="text-gray-600">Return: {debugInfo.dateTo}</p>
+                        )}
+                        <p className="text-gray-600">
+                          Trip type: <span className="font-semibold">{debugInfo.tripType}</span>
+                        </p>
+                        <p className="text-gray-600">
+                          Found flights for: {debugInfo.foundFlights}/{debugInfo.totalTravelers}{' '}
+                          travelers
+                        </p>
                       </div>
 
                       {debugInfo.travelers.map((t, i) => (
-                        <div key={i} className={`rounded-lg p-3 ${t.hasFlights ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <div
+                          key={i}
+                          className={`rounded-lg p-3 ${t.hasFlights ? 'bg-green-50' : 'bg-red-50'}`}
+                        >
                           <p className="font-semibold">{t.name}</p>
-                          <p className="text-xs">Airports found: {t.airportsCount} ({t.airports})</p>
+                          <p className="text-xs">
+                            Airports found: {t.airportsCount} ({t.airports})
+                          </p>
                           <p className="text-xs">Flights found: {t.flightCount}</p>
                           {t.hasFlights && (
                             <>
                               <p className="text-xs">Cheapest: £{t.cheapestPrice}</p>
-                              <p className="text-xs">Itineraries: {t.itineraries} ({t.itineraries > 1 ? 'round-trip' : 'one-way'})</p>
+                              <p className="text-xs">
+                                Itineraries: {t.itineraries} (
+                                {t.itineraries > 1 ? 'round-trip' : 'one-way'})
+                              </p>
                             </>
                           )}
-                          {!t.hasFlights && <p className="text-xs text-red-600">❌ No flights found</p>}
-                          {t.airportsCount === 0 && <p className="text-xs text-red-600">⚠️ No airports assigned for "{t.origin}"</p>}
+                          {!t.hasFlights && (
+                            <p className="text-xs text-red-600">❌ No flights found</p>
+                          )}
+                          {t.airportsCount === 0 && (
+                            <p className="text-xs text-red-600">
+                              ⚠️ No airports assigned for "{t.origin}"
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -2297,8 +2615,8 @@ export default function HolidayPlanner() {
                             fairness.score >= 80
                               ? 'bg-gradient-to-r from-green-400 to-green-600 text-white'
                               : fairness.score >= 60
-                              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
-                              : 'bg-gradient-to-r from-red-400 to-red-600 text-white'
+                                ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
+                                : 'bg-gradient-to-r from-red-400 to-red-600 text-white'
                           }`}
                         >
                           {fairness.score}%
@@ -2314,9 +2632,13 @@ export default function HolidayPlanner() {
 
                       {/* Traveler Cost Breakdown */}
                       <div className="space-y-3">
-                        {fairness.travelers.map((t) => {
-                          const traveler = travelers.find(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
-                          const originalIndex = travelers.findIndex(traveler => (traveler.name || `From ${traveler.origin}`) === t.name);
+                        {fairness.travelers.map(t => {
+                          const traveler = travelers.find(
+                            traveler => (traveler.name || `From ${traveler.origin}`) === t.name
+                          );
+                          const originalIndex = travelers.findIndex(
+                            traveler => (traveler.name || `From ${traveler.origin}`) === t.name
+                          );
                           const colors = getTravelerColor(originalIndex);
                           return (
                             <div
@@ -2331,11 +2653,14 @@ export default function HolidayPlanner() {
                                     {t.airport}
                                   </p>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    <Clock className="w-3 h-3 inline" /> {t.distance} miles from home
+                                    <Clock className="w-3 h-3 inline" /> {t.distance} miles from
+                                    home
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-2xl font-bold text-purple-600">£{Math.round(t.cost)}</p>
+                                  <p className="text-2xl font-bold text-purple-600">
+                                    £{Math.round(t.cost)}
+                                  </p>
                                   {t.diffFromAvg !== 0 && (
                                     <div className="flex items-center gap-1 justify-end mt-1">
                                       {t.diffFromAvg > 0 ? (
@@ -2368,141 +2693,183 @@ export default function HolidayPlanner() {
                       </h2>
 
                       <div className="space-y-4">
-                        {travelers.filter((t) => t.selectedAirport).map((t) => {
-                          const data = flightData[t.id];
-                          if (!data || !data.cheapest) return null;
+                        {travelers
+                          .filter(t => t.selectedAirport)
+                          .map(t => {
+                            const data = flightData[t.id];
+                            if (!data || !data.cheapest) return null;
 
-                          const flight = data.cheapest;
-                          const price = parseFloat(flight.price.total);
-                          const outboundItinerary = flight.itineraries[0];
-                          const returnItinerary = flight.itineraries[1]; // Will be undefined for one-way
+                            const flight = data.cheapest;
+                            const price = parseFloat(flight.price.total);
+                            const outboundItinerary = flight.itineraries[0];
+                            const returnItinerary = flight.itineraries[1]; // Will be undefined for one-way
 
-                          // Debug logging
-                          devLog(`📋 ${t.name || t.origin} flight details:`, {
-                            totalItineraries: flight.itineraries.length,
-                            hasReturn: !!returnItinerary,
-                            price,
-                            outboundSegments: outboundItinerary.segments.length,
-                            returnSegments: returnItinerary?.segments?.length || 0
-                          });
+                            // Debug logging
+                            devLog(`📋 ${t.name || t.origin} flight details:`, {
+                              totalItineraries: flight.itineraries.length,
+                              hasReturn: !!returnItinerary,
+                              price,
+                              outboundSegments: outboundItinerary.segments.length,
+                              returnSegments: returnItinerary?.segments?.length || 0,
+                            });
 
-                          // Get first and last segments for proper origin/destination display
-                          const outboundFirstSegment = outboundItinerary.segments[0];
-                          const outboundLastSegment = outboundItinerary.segments[outboundItinerary.segments.length - 1];
+                            // Get first and last segments for proper origin/destination display
+                            const outboundFirstSegment = outboundItinerary.segments[0];
+                            const outboundLastSegment =
+                              outboundItinerary.segments[outboundItinerary.segments.length - 1];
 
-                          const airport = flight.departureAirport;
-                          const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
-                          const colors = getTravelerColor(originalIndex);
+                            const airport = flight.departureAirport;
+                            const originalIndex = travelers.findIndex(
+                              traveler => traveler.id === t.id
+                            );
+                            const colors = getTravelerColor(originalIndex);
 
-                          return (
-                            <div
-                              key={t.id}
-                              className={`p-5 rounded-2xl border-3 ${colors.border} bg-gradient-to-br from-white to-gray-50 shadow-lg hover:shadow-xl transition-all`}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-sm`}>
-                                  {t.name || `From ${t.origin}`}
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-3xl font-bold text-green-600">£{Math.round(price)}</p>
-                                  <p className="text-xs text-gray-500">{dateTo ? 'round-trip' : 'one-way'}</p>
-                                </div>
-                              </div>
-
-                              {/* Notice when showing connecting flights due to no direct flights available */}
-                              {data.usedFallback && (
-                                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                                  <p className="text-xs text-amber-800 font-medium">
-                                    ℹ️ No direct flights available - showing best connecting flight
-                                  </p>
-                                </div>
-                              )}
-
-                              <div className="space-y-3">
-                                {/* Outbound Flight */}
-                                <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
-                                  <p className="text-xs text-blue-700 font-semibold mb-2">
-                                    {returnItinerary ? '→ Outbound' : '→ Flight'}
-                                  </p>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex items-center gap-2 flex-1">
-                                      <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{outboundFirstSegment.departure.iataCode}</p>
-                                        <p className="text-xs text-gray-500">{airport.name}</p>
-                                      </div>
-                                      <ArrowRight className="w-5 h-5 text-purple-600" />
-                                      <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{outboundLastSegment.arrival.iataCode}</p>
-                                        <p className="text-xs text-gray-500">{destination}</p>
-                                      </div>
-                                    </div>
+                            return (
+                              <div
+                                key={t.id}
+                                className={`p-5 rounded-2xl border-3 ${colors.border} bg-gradient-to-br from-white to-gray-50 shadow-lg hover:shadow-xl transition-all`}
+                              >
+                                <div className="flex items-start justify-between mb-3">
+                                  <div
+                                    className={`px-3 py-1 rounded-full bg-gradient-to-r ${colors.gradient} text-white font-bold text-sm`}
+                                  >
+                                    {t.name || `From ${t.origin}`}
                                   </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="bg-white p-2 rounded-lg">
-                                      <p className="text-xs text-gray-500">Flight</p>
-                                      <p className="text-sm font-bold text-gray-800">
-                                        {outboundFirstSegment.carrierCode} {outboundFirstSegment.number}
-                                        {outboundItinerary.segments.length > 1 && ` +${outboundItinerary.segments.length - 1}`}
-                                      </p>
-                                    </div>
-                                    <div className="bg-white p-2 rounded-lg">
-                                      <p className="text-xs text-gray-500">Duration</p>
-                                      <p className="text-sm font-bold text-gray-800">
-                                        {outboundItinerary.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
-                                      </p>
-                                    </div>
+                                  <div className="text-right">
+                                    <p className="text-3xl font-bold text-green-600">
+                                      £{Math.round(price)}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {dateTo ? 'round-trip' : 'one-way'}
+                                    </p>
                                   </div>
                                 </div>
 
-                                {/* Return Flight (if exists) */}
-                                {returnItinerary && (() => {
-                                  const returnFirstSegment = returnItinerary.segments[0];
-                                  const returnLastSegment = returnItinerary.segments[returnItinerary.segments.length - 1];
-                                  return (
-                                    <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
-                                      <p className="text-xs text-purple-700 font-semibold mb-2">← Return</p>
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <div className="flex items-center gap-2 flex-1">
-                                          <div className="text-center">
-                                            <p className="text-lg font-bold text-gray-800">{returnFirstSegment.departure.iataCode}</p>
-                                            <p className="text-xs text-gray-500">{destination}</p>
-                                          </div>
-                                          <ArrowRight className="w-5 h-5 text-purple-600" />
-                                          <div className="text-center">
-                                            <p className="text-lg font-bold text-gray-800">{returnLastSegment.arrival.iataCode}</p>
-                                            <p className="text-xs text-gray-500">{airport.name}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="bg-white p-2 rounded-lg">
-                                          <p className="text-xs text-gray-500">Flight</p>
-                                          <p className="text-sm font-bold text-gray-800">
-                                            {returnFirstSegment.carrierCode} {returnFirstSegment.number}
-                                            {returnItinerary.segments.length > 1 && ` +${returnItinerary.segments.length - 1}`}
+                                {/* Notice when showing connecting flights due to no direct flights available */}
+                                {data.usedFallback && (
+                                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                    <p className="text-xs text-amber-800 font-medium">
+                                      ℹ️ No direct flights available - showing best connecting
+                                      flight
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="space-y-3">
+                                  {/* Outbound Flight */}
+                                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                                    <p className="text-xs text-blue-700 font-semibold mb-2">
+                                      {returnItinerary ? '→ Outbound' : '→ Flight'}
+                                    </p>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <div className="text-center">
+                                          <p className="text-lg font-bold text-gray-800">
+                                            {outboundFirstSegment.departure.iataCode}
                                           </p>
+                                          <p className="text-xs text-gray-500">{airport.name}</p>
                                         </div>
-                                        <div className="bg-white p-2 rounded-lg">
-                                          <p className="text-xs text-gray-500">Duration</p>
-                                          <p className="text-sm font-bold text-gray-800">
-                                            {returnItinerary.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm').toLowerCase()}
+                                        <ArrowRight className="w-5 h-5 text-purple-600" />
+                                        <div className="text-center">
+                                          <p className="text-lg font-bold text-gray-800">
+                                            {outboundLastSegment.arrival.iataCode}
                                           </p>
+                                          <p className="text-xs text-gray-500">{destination}</p>
                                         </div>
                                       </div>
                                     </div>
-                                  );
-                                })()}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="bg-white p-2 rounded-lg">
+                                        <p className="text-xs text-gray-500">Flight</p>
+                                        <p className="text-sm font-bold text-gray-800">
+                                          {outboundFirstSegment.carrierCode}{' '}
+                                          {outboundFirstSegment.number}
+                                          {outboundItinerary.segments.length > 1 &&
+                                            ` +${outboundItinerary.segments.length - 1}`}
+                                        </p>
+                                      </div>
+                                      <div className="bg-white p-2 rounded-lg">
+                                        <p className="text-xs text-gray-500">Duration</p>
+                                        <p className="text-sm font-bold text-gray-800">
+                                          {outboundItinerary.duration
+                                            .replace('PT', '')
+                                            .replace('H', 'h ')
+                                            .replace('M', 'm')
+                                            .toLowerCase()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
 
-                                <div className="bg-green-50 border border-green-200 p-3 rounded-xl">
-                                  <p className="text-xs text-green-700 font-semibold flex items-center gap-1">
-                                    <Check className="w-3 h-3" />
-                                    Best option from {data.allAirportOptions} nearby airports
-                                  </p>
+                                  {/* Return Flight (if exists) */}
+                                  {returnItinerary &&
+                                    (() => {
+                                      const returnFirstSegment = returnItinerary.segments[0];
+                                      const returnLastSegment =
+                                        returnItinerary.segments[
+                                          returnItinerary.segments.length - 1
+                                        ];
+                                      return (
+                                        <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+                                          <p className="text-xs text-purple-700 font-semibold mb-2">
+                                            ← Return
+                                          </p>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center gap-2 flex-1">
+                                              <div className="text-center">
+                                                <p className="text-lg font-bold text-gray-800">
+                                                  {returnFirstSegment.departure.iataCode}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                  {destination}
+                                                </p>
+                                              </div>
+                                              <ArrowRight className="w-5 h-5 text-purple-600" />
+                                              <div className="text-center">
+                                                <p className="text-lg font-bold text-gray-800">
+                                                  {returnLastSegment.arrival.iataCode}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                  {airport.name}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="bg-white p-2 rounded-lg">
+                                              <p className="text-xs text-gray-500">Flight</p>
+                                              <p className="text-sm font-bold text-gray-800">
+                                                {returnFirstSegment.carrierCode}{' '}
+                                                {returnFirstSegment.number}
+                                                {returnItinerary.segments.length > 1 &&
+                                                  ` +${returnItinerary.segments.length - 1}`}
+                                              </p>
+                                            </div>
+                                            <div className="bg-white p-2 rounded-lg">
+                                              <p className="text-xs text-gray-500">Duration</p>
+                                              <p className="text-sm font-bold text-gray-800">
+                                                {returnItinerary.duration
+                                                  .replace('PT', '')
+                                                  .replace('H', 'h ')
+                                                  .replace('M', 'm')
+                                                  .toLowerCase()}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
+                                  <div className="bg-green-50 border border-green-200 p-3 rounded-xl">
+                                    <p className="text-xs text-green-700 font-semibold flex items-center gap-1">
+                                      <Check className="w-3 h-3" />
+                                      Best option from {data.allAirportOptions} nearby airports
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
                       </div>
                     </div>
                   </>
@@ -2513,18 +2880,26 @@ export default function HolidayPlanner() {
                         <Info className="w-8 h-8 text-yellow-600" />
                       </div>
                       <h3 className="text-xl font-bold mb-2">No Flights Found</h3>
-                      <p className="text-gray-600 mb-4">We couldn't find any flights for the selected date and destination.</p>
+                      <p className="text-gray-600 mb-4">
+                        We couldn't find any flights for the selected date and destination.
+                      </p>
                       <div className="text-left bg-blue-50 p-4 rounded-lg mb-4">
                         <p className="font-bold text-sm mb-2">Try these tips:</p>
                         <ul className="text-sm text-gray-700 space-y-1">
-                          <li>• Select a date further in the future (airlines release flights up to 11 months ahead)</li>
+                          <li>
+                            • Select a date further in the future (airlines release flights up to 11
+                            months ahead)
+                          </li>
                           <li>• Try a different destination</li>
                           <li>• Check the browser console (F12) for detailed API responses</li>
                           <li>• Make sure you entered valid city names</li>
                         </ul>
                       </div>
                       <button
-                        onClick={() => { setShowResults(false); setFlightData({}); }}
+                        onClick={() => {
+                          setShowResults(false);
+                          setFlightData({});
+                        }}
                         className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-xl font-bold hover:opacity-90"
                       >
                         <ArrowLeft className="w-4 inline" /> Try Different Search
@@ -2543,7 +2918,8 @@ export default function HolidayPlanner() {
             <div className="bg-white rounded-2xl p-6 max-w-md w-full">
               <h3 className="text-xl font-bold text-gray-800 mb-3">Remove Traveler?</h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to remove this traveler? All their travel information will be lost.
+                Are you sure you want to remove this traveler? All their travel information will be
+                lost.
               </p>
               <div className="flex gap-3">
                 <button
@@ -2569,14 +2945,15 @@ export default function HolidayPlanner() {
             <div className="bg-white rounded-2xl p-6 max-w-md w-full">
               <h3 className="text-xl font-bold text-gray-800 mb-3">Duplicate Traveler</h3>
               <p className="text-gray-600 mb-4">
-                This will copy all details from {showDuplicateModal.name || 'this traveler'}. Enter a name for the new traveler:
+                This will copy all details from {showDuplicateModal.name || 'this traveler'}. Enter
+                a name for the new traveler:
               </p>
               <input
                 type="text"
                 placeholder="Name (optional)"
                 value={duplicateName}
-                onChange={(e) => setDuplicateName(e.target.value)}
-                onKeyPress={(e) => {
+                onChange={e => setDuplicateName(e.target.value)}
+                onKeyPress={e => {
                   if (e.key === 'Enter') {
                     confirmDuplicateTraveler();
                   }
@@ -2610,72 +2987,79 @@ export default function HolidayPlanner() {
             <div className="bg-white rounded-2xl p-5 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between mb-4">
                 <h3 className="text-xl font-bold">Share Booking Links</h3>
-                <button onClick={() => setShowShareModal(false)}><X className="w-5" /></button>
+                <button onClick={() => setShowShareModal(false)}>
+                  <X className="w-5" />
+                </button>
               </div>
-              
+
               <p className="text-xs text-gray-600 mb-4 bg-blue-50 p-2 rounded">
-                💡 We find the fairest meeting spot, then link you to trusted booking sites. We may earn a small commission if you book - at no extra cost to you.
+                💡 We find the fairest meeting spot, then link you to trusted booking sites. We may
+                earn a small commission if you book - at no extra cost to you.
               </p>
 
-              {travelers.filter(t => t.selectedAirport).map((t) => {
-                const data = flightData[t.id];
-                if (!data || !data.cheapest) return null;
+              {travelers
+                .filter(t => t.selectedAirport)
+                .map(t => {
+                  const data = flightData[t.id];
+                  if (!data || !data.cheapest) return null;
 
-                const flight = data.cheapest;
-                const price = Math.round(parseFloat(flight.price.total));
-                const airport = flight.departureAirport;
-                const destCode = flight.itineraries[0].segments[0].arrival.iataCode;
-                const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
+                  const flight = data.cheapest;
+                  const price = Math.round(parseFloat(flight.price.total));
+                  const airport = flight.departureAirport;
+                  const destCode = flight.itineraries[0].segments[0].arrival.iataCode;
+                  const originalIndex = travelers.findIndex(traveler => traveler.id === t.id);
 
-                return (
-                  <div key={t.id} className="p-4 bg-green-50 rounded-lg mb-3">
-                    <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
-                    {data.usedFallback && (
-                      <p className="text-xs text-amber-700 mt-1 mb-1">
-                        ℹ️ No direct flights available - showing connecting flight
+                  return (
+                    <div key={t.id} className="p-4 bg-green-50 rounded-lg mb-3">
+                      <p className="font-bold">{t.name || `Person ${originalIndex + 1}`}</p>
+                      {data.usedFallback && (
+                        <p className="text-xs text-amber-700 mt-1 mb-1">
+                          ℹ️ No direct flights available - showing connecting flight
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-600">
+                        {airport.name} ({airport.code}) → {destination} • £{price}
                       </p>
-                    )}
-                    <p className="text-sm text-gray-600">{airport.name} ({airport.code}) → {destination} • £{price}</p>
-                    <div className="flex gap-2 mt-2">
-                      <a
-                        href={`https://www.skyscanner.net/transport/flights/${airport.code}/${destCode}/${dateFrom}/?adults=1`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm font-semibold text-center hover:bg-blue-700"
-                        onClick={() => {
-                          // Track affiliate click (MONEY EVENT)
-                          trackAffiliateClick(
-                            t.origin || airport.city,
-                            price,
-                            calculateFairnessScore(),
-                            destination
-                          );
-                        }}
-                      >
-                        Skyscanner <ExternalLink className="w-3 inline" />
-                      </a>
-                      <a 
-                        href={`https://www.kiwi.com/deep?from=${airport.code}&to=${destCode}&departure=${dateFrom}&return=${dateTo}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm font-semibold text-center hover:bg-green-700"
-                      >
-                        Kiwi <ExternalLink className="w-3 inline" />
-                      </a>
+                      <div className="flex gap-2 mt-2">
+                        <a
+                          href={`https://www.skyscanner.net/transport/flights/${airport.code}/${destCode}/${dateFrom}/?adults=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm font-semibold text-center hover:bg-blue-700"
+                          onClick={() => {
+                            // Track affiliate click (MONEY EVENT)
+                            trackAffiliateClick(
+                              t.origin || airport.city,
+                              price,
+                              calculateFairnessScore(),
+                              destination
+                            );
+                          }}
+                        >
+                          Skyscanner <ExternalLink className="w-3 inline" />
+                        </a>
+                        <a
+                          href={`https://www.kiwi.com/deep?from=${airport.code}&to=${destCode}&departure=${dateFrom}&return=${dateTo}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm font-semibold text-center hover:bg-green-700"
+                        >
+                          Kiwi <ExternalLink className="w-3 inline" />
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              
+                  );
+                })}
+
               <div className="flex gap-2 mt-4">
-                <input 
-                  type="text" 
-                  value={generateShareLink()} 
-                  readOnly 
-                  className="flex-1 px-3 py-2 border-2 rounded-lg bg-gray-50 text-xs" 
+                <input
+                  type="text"
+                  value={generateShareLink()}
+                  readOnly
+                  className="flex-1 px-3 py-2 border-2 rounded-lg bg-gray-50 text-xs"
                 />
-                <button 
-                  onClick={copyShareLink} 
+                <button
+                  onClick={copyShareLink}
                   className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                 >
                   {copied ? <Check className="w-4" /> : <Copy className="w-4" />}
@@ -2690,47 +3074,55 @@ export default function HolidayPlanner() {
             <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between mb-4">
                 <h3 className="text-xl font-bold">Help Us Improve! 🚀</h3>
-                <button onClick={() => setShowSurveyModal(false)}><X className="w-5" /></button>
+                <button onClick={() => setShowSurveyModal(false)}>
+                  <X className="w-5" />
+                </button>
               </div>
               <p className="text-sm mb-4">Quick feedback (30 seconds):</p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold mb-2">Did this tool help you find a fair meeting spot?</label>
-                  {['Yes, exactly what I needed!', 'Somewhat helpful', 'Not really', 'No'].map(o => (
-                    <label key={o} className="flex items-center gap-2 mb-1">
-                      <input 
-                        type="radio" 
-                        name="use" 
-                        value={o} 
-                        checked={surveyData.wouldUse === o} 
-                        onChange={(e) => setSurveyData({...surveyData, wouldUse: e.target.value})} 
-                      />
-                      <span className="text-sm">{o}</span>
-                    </label>
-                  ))}
+                  <label className="block text-sm font-bold mb-2">
+                    Did this tool help you find a fair meeting spot?
+                  </label>
+                  {['Yes, exactly what I needed!', 'Somewhat helpful', 'Not really', 'No'].map(
+                    o => (
+                      <label key={o} className="flex items-center gap-2 mb-1">
+                        <input
+                          type="radio"
+                          name="use"
+                          value={o}
+                          checked={surveyData.wouldUse === o}
+                          onChange={e => setSurveyData({ ...surveyData, wouldUse: e.target.value })}
+                        />
+                        <span className="text-sm">{o}</span>
+                      </label>
+                    )
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">What would make you MORE likely to book?</label>
-                  <textarea 
-                    placeholder="Features you'd need..." 
-                    value={surveyData.feedback} 
-                    onChange={(e) => setSurveyData({...surveyData, feedback: e.target.value})} 
-                    className="w-full px-3 py-2 border-2 rounded-lg text-sm h-20" 
+                  <label className="block text-sm font-bold mb-2">
+                    What would make you MORE likely to book?
+                  </label>
+                  <textarea
+                    placeholder="Features you'd need..."
+                    value={surveyData.feedback}
+                    onChange={e => setSurveyData({ ...surveyData, feedback: e.target.value })}
+                    className="w-full px-3 py-2 border-2 rounded-lg text-sm h-20"
                   />
                 </div>
-                <input 
-                  type="email" 
-                  placeholder="your@email.com (optional)" 
-                  value={surveyData.email} 
-                  onChange={(e) => setSurveyData({...surveyData, email: e.target.value})} 
-                  className="w-full px-3 py-2 border-2 rounded-lg text-sm" 
+                <input
+                  type="email"
+                  placeholder="your@email.com (optional)"
+                  value={surveyData.email}
+                  onChange={e => setSurveyData({ ...surveyData, email: e.target.value })}
+                  className="w-full px-3 py-2 border-2 rounded-lg text-sm"
                 />
-                <button 
-                  onClick={() => { 
-                    devLog('Survey:', surveyData); 
-                    setSurveySubmitted(true); 
-                    setTimeout(() => setShowSurveyModal(false), 2000); 
-                  }} 
+                <button
+                  onClick={() => {
+                    devLog('Survey:', surveyData);
+                    setSurveySubmitted(true);
+                    setTimeout(() => setShowSurveyModal(false), 2000);
+                  }}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold"
                 >
                   Submit
