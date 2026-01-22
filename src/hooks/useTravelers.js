@@ -199,8 +199,8 @@ export const useTravelers = () => {
         setSearchingAirports(prev => ({ ...prev, [travelerId]: false }));
         setAirportSearchLog(prev => [...prev, logEntry]);
       }
-       
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [apiSearchAirports]
   );
 

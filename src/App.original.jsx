@@ -1630,16 +1630,17 @@ export default function HolidayPlanner() {
     return filtered;
   };
 
-   
   const destinationsToShow = useMemo(
     () => getSortedDestinations(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [availableDestinations, tripType, sortBy]
   );
 
   const destination = selectedDestination || customDestination;
-   
+
   const fairness = useMemo(
     () => getFairnessDetails(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [showResults, selectedDestination, customDestination, flightData, travelers]
   );
 
