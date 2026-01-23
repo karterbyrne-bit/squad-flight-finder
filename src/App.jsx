@@ -17,7 +17,7 @@ import './App.css';
 
 // Custom Hooks
 import { useTravelers } from './hooks/useTravelers';
-import { useAmadeusAPI } from './hooks/useAmadeusAPI';
+import { useFlightAPI } from './hooks/useFlightAPI';
 import { useFairness } from './hooks/useFairness';
 import { useSettings } from './hooks/useSettings';
 
@@ -107,7 +107,8 @@ export default function HolidayPlanner() {
     confirmDuplicateTraveler,
   } = useTravelers();
 
-  const { searchAirports, searchFlights, searchDestinations } = useAmadeusAPI();
+  const { searchAirports, searchFlights, searchDestinations, provider, generateBookingLink } =
+    useFlightAPI();
 
   const { calculateWeightedScore, calculateFairnessScore, getFairnessDetails } = useFairness(
     travelers,
@@ -636,8 +637,19 @@ export default function HolidayPlanner() {
             Compare prices with Fairness for your squad
           </p>
           {debugMode && (
-            <div className="mt-3 inline-block bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">
-              🔧 Debug Mode Active (Ctrl+Shift+D to toggle)
+            <div className="mt-3 flex flex-col sm:flex-row gap-2 items-center justify-center">
+              <div className="inline-block bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">
+                🔧 Debug Mode Active (Ctrl+Shift+D to toggle)
+              </div>
+              <div
+                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                  provider === 'travelpayouts'
+                    ? 'bg-green-400 text-green-900'
+                    : 'bg-blue-400 text-blue-900'
+                }`}
+              >
+                {provider === 'travelpayouts' ? '💰 FREE API (Travelpayouts)' : '💳 PAID API (Amadeus)'}
+              </div>
             </div>
           )}
         </div>

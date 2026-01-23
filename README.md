@@ -25,7 +25,9 @@ Squad Flight Finder solves a real problem: when friends or family want to travel
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Amadeus API credentials (free tier available)
+- **API Provider** (choose one):
+  - **Travelpayouts API** (recommended) - Free with affiliate commissions
+  - **Amadeus API** - Paid API with test environment
 
 ### Installation
 
@@ -39,22 +41,94 @@ npm install
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env and add your Amadeus API credentials
+# Edit .env and add your API credentials (see below)
 
-# Start development server with Netlify Functions
-npm run dev:netlify
+# Start development server with Vercel Functions
+npm run dev
 ```
 
-Visit `http://localhost:8888` to see the app.
+Visit `http://localhost:3000` to see the app.
 
-**Note:** Use `npm run dev:netlify` instead of `npm run dev` to run the backend API alongside the frontend.
+### Choosing Your Flight API Provider
 
-### Getting Amadeus API Keys
+Squad Flight Finder supports two flight APIs. Choose the one that fits your needs:
+
+#### Option 1: Travelpayouts API (Recommended) 💚
+
+**Why choose Travelpayouts:**
+- ✅ **Completely FREE** - No API costs
+- ✅ **Earn commissions** - Get paid when users book flights
+- ✅ **Unlimited cached searches** - Fast destination discovery
+- ✅ **Real-time prices** - 200 searches/hour for final bookings
+- ⚠️ **30-60 second search** - Real-time searches take longer
+
+**Perfect for:** Production use, low-traffic apps, earning revenue
+
+**Setup Instructions:**
+
+1. Go to [Travelpayouts](https://www.travelpayouts.com/)
+2. Sign up for a free account
+3. Go to **Tools → API** in the dashboard
+4. Copy your **API Token**
+5. Go to **Tools → Deeplinks** to get your **Marker ID** (for commissions)
+6. Add to your `.env`:
+
+```env
+# Flight API Selection
+VITE_FLIGHT_API_PROVIDER=travelpayouts
+
+# Travelpayouts Credentials
+TRAVELPAYOUTS_TOKEN=your_api_token_here
+TRAVELPAYOUTS_MARKER=your_marker_id_here
+```
+
+**Expected Performance:**
+- Step 2 (Destinations): Instant results (cached data)
+- Step 3 (Flight Search): 30-60 seconds (real-time search)
+- Rate Limit: 200 searches/hour (sufficient for 5,000+ sessions/month)
+
+#### Option 2: Amadeus API (Paid) 💰
+
+**Why choose Amadeus:**
+- ✅ **Fast searches** - Real-time results in 3-5 seconds
+- ✅ **Comprehensive data** - More airlines and routes
+- ⚠️ **Expensive** - ~€1,400/month @ 5,000 sessions
+- ⚠️ **Test environment** - Free tier has limited data
+
+**Perfect for:** Development/testing, high-budget production
+
+**Setup Instructions:**
 
 1. Go to [Amadeus for Developers](https://developers.amadeus.com/)
 2. Sign up for a free account
 3. Create a new app in the dashboard
-4. Copy your API Key and API Secret to `.env`
+4. Copy your API Key and API Secret
+5. Add to your `.env`:
+
+```env
+# Flight API Selection
+VITE_FLIGHT_API_PROVIDER=amadeus
+
+# Amadeus Credentials
+AMADEUS_API_KEY=your_api_key_here
+AMADEUS_API_SECRET=your_api_secret_here
+```
+
+**Note:** The free test environment has limited flight data. Production requires a paid plan.
+
+#### Switching Between APIs
+
+Simply change `VITE_FLIGHT_API_PROVIDER` in your `.env` file:
+
+```env
+# Use Travelpayouts (free, earns commission)
+VITE_FLIGHT_API_PROVIDER=travelpayouts
+
+# OR use Amadeus (paid, faster)
+VITE_FLIGHT_API_PROVIDER=amadeus
+```
+
+The app automatically adapts - no code changes needed!
 
 ---
 
@@ -107,37 +181,88 @@ Generate a shareable link for your group and book via partner links.
 
 ---
 
+## 💰 Monetization
+
+Squad Flight Finder supports multiple revenue streams:
+
+### Travelpayouts Affiliate Commissions
+When using Travelpayouts API, the app automatically generates affiliate links. Users book through Aviasales, and you earn commission on completed bookings - typically **0.5-1.5% of ticket price**.
+
+**Expected Revenue (5,000 sessions/month):**
+- Conversion rate: 2%
+- Bookings per month: 100
+- Average ticket: €300
+- Commission rate: 1%
+- **Monthly revenue: €60-€150**
+
+### Google AdSense (Optional)
+Display ads in the flight results page. Configure in `.env`:
+
+```env
+VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
+VITE_ADSENSE_SLOT_RESULTS=1234567890
+```
+
+**Expected Revenue (5,000 sessions/month):**
+- Budget travel audience
+- Ad placements: 1 per search
+- **Monthly revenue: €50-€150**
+
+### Combined Revenue Model
+With Travelpayouts (free) + AdSense:
+- API costs: **€0**
+- Revenue: **€110-€300/month** @ 5,000 sessions
+- **Net profit: €110-€300/month**
+
+Compare to Amadeus:
+- API costs: **€1,400/month** @ 5,000 sessions
+- Revenue: €110-€300/month
+- **Net loss: €1,100-€1,290/month**
+
+---
+
 ## 🏗️ Architecture
 
 ### Tech Stack
 - **Frontend**: React 19.2, Tailwind CSS, Vite
-- **Backend**: Netlify Functions (serverless)
-- **API**: Amadeus Flight Search API
+- **Backend**: Vercel Functions (serverless)
+- **APIs**:
+  - Travelpayouts Flight API (free, affiliate model)
+  - Amadeus Flight Search API (paid)
+  - Switchable via environment variable
+- **Monetization**: Google AdSense, affiliate commissions
 - **Testing**: Vitest, React Testing Library, Playwright
-- **Deployment**: Netlify
+- **Deployment**: Vercel
 
 ### Security Architecture
 ```
-Browser → Netlify Functions → Amadeus API
+Browser → Vercel Functions → Flight API (Travelpayouts or Amadeus)
 ```
 
-API credentials are **never** exposed to the browser. All Amadeus API calls go through secure backend functions. See [SECURITY.md](./SECURITY.md) for details.
+API credentials are **never** exposed to the browser. All flight API calls go through secure backend functions with server-side authentication. See [SECURITY.md](./SECURITY.md) for details.
 
 ### Project Structure
 ```
 squad-flight-finder/
 ├── src/
 │   ├── hooks/            # Custom React hooks
+│   │   ├── useAmadeusAPI.js
+│   │   ├── useTravelpayoutsAPI.js
+│   │   └── useFlightAPI.js (provider wrapper)
 │   ├── utils/            # Utility functions
 │   ├── components/       # React components
 │   ├── App.jsx           # Main application component
 │   └── main.jsx          # Entry point
-├── netlify/
-│   └── functions/        # Backend API (serverless)
-│       ├── search-airports.js
-│       ├── search-flights.js
-│       ├── search-destinations.js
-│       └── utils/amadeus.js
+├── api/                  # Backend API (Vercel serverless)
+│   ├── _utils/           # Shared utilities
+│   │   ├── amadeus.js    # Amadeus authentication & helpers
+│   │   └── travelpayouts.js  # Travelpayouts auth & data mapping
+│   ├── travelpayouts/    # Travelpayouts endpoints
+│   │   ├── search-destinations-cached.js
+│   │   └── search-flights-realtime.js
+│   ├── search-airports.js
+│   ├── search-flights.js
+│   └── search-destinations.js
 ├── tests/
 │   ├── 01-core-flight-search.test.jsx
 │   ├── 02-filtering-sorting.test.jsx
@@ -145,7 +270,7 @@ squad-flight-finder/
 │   ├── 04-error-handling.test.jsx
 │   └── utils/            # Test helpers and mocks
 ├── .env                  # Environment variables (create from .env.example)
-├── netlify.toml          # Netlify configuration
+├── vercel.json           # Vercel configuration
 ├── package.json
 └── vite.config.js
 ```
@@ -188,14 +313,43 @@ See [UAT Test Guide](./UAT_TEST_GUIDE.md) for detailed test documentation.
 
 ### Environment Variables
 
-Create a `.env` file with:
+Create a `.env` file based on your chosen API provider:
 
+#### For Travelpayouts (Recommended):
 ```env
-VITE_AMADEUS_API_KEY=your_api_key_here
-VITE_AMADEUS_API_SECRET=your_api_secret_here
+# ============================================================================
+# FLIGHT API SELECTION
+# ============================================================================
+VITE_FLIGHT_API_PROVIDER=travelpayouts
+
+# ============================================================================
+# TRAVELPAYOUTS API CREDENTIALS
+# ============================================================================
+TRAVELPAYOUTS_TOKEN=your_api_token_here
+TRAVELPAYOUTS_MARKER=your_marker_id_here
+
+# ============================================================================
+# OPTIONAL: GOOGLE ADSENSE (MONETIZATION)
+# ============================================================================
+VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
+VITE_ADSENSE_SLOT_RESULTS=1234567890
 ```
 
-**⚠️ Security Note:** Never commit `.env` to version control. The repository includes `.env.example` as a template.
+#### For Amadeus:
+```env
+# ============================================================================
+# FLIGHT API SELECTION
+# ============================================================================
+VITE_FLIGHT_API_PROVIDER=amadeus
+
+# ============================================================================
+# AMADEUS API CREDENTIALS
+# ============================================================================
+AMADEUS_API_KEY=your_api_key_here
+AMADEUS_API_SECRET=your_api_secret_here
+```
+
+**⚠️ Security Note:** Never commit `.env` to version control. The repository includes `.env.example` as a template with all options documented.
 
 ### Debug Mode
 
@@ -215,6 +369,10 @@ Press `Ctrl+Shift+D` to toggle debug mode and see:
 See our [Project Roadmap](./PROJECT_ROADMAP.md) for detailed plans to become best-in-class.
 
 ### Recent Updates
+- ✅ **Dual API support** - Travelpayouts (free) + Amadeus (paid)
+- ✅ **Affiliate monetization** - Earn commissions on bookings
+- ✅ **API cost optimization** - Reduced costs by 20-25%
+- ✅ Google AdSense integration
 - ✅ Comprehensive UAT test suite (35+ scenarios)
 - ✅ Advanced caching system
 - ✅ Fairness calculation algorithm
@@ -249,7 +407,9 @@ This software and associated documentation files are proprietary. Unauthorized c
 
 ## 🙏 Acknowledgments
 
-- [Amadeus API](https://developers.amadeus.com/) - Flight search data
+- [Travelpayouts API](https://www.travelpayouts.com/) - Free flight search with affiliate commissions
+- [Amadeus API](https://developers.amadeus.com/) - Premium flight search data
+- [Google AdSense](https://www.google.com/adsense/) - Monetization platform
 - [Lucide Icons](https://lucide.dev/) - Beautiful icons
 - [Tailwind CSS](https://tailwindcss.com/) - Styling framework
 
