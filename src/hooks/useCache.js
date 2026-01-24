@@ -3,8 +3,12 @@ import { useMemo } from 'react';
 // DEVELOPMENT LOGGING HELPER
 // Only logs in development mode to avoid performance impact and data leakage in production
 const isDev = import.meta.env.DEV;
-const devLog = (...args) => { if (isDev) console.log(...args); };
-const devWarn = (...args) => { if (isDev) console.warn(...args); };
+const devLog = (...args) => {
+  if (isDev) console.log(...args);
+};
+const devWarn = (...args) => {
+  if (isDev) console.warn(...args);
+};
 
 // API CALL TRACKING
 const apiCallTracker = {
@@ -16,38 +20,44 @@ const apiCallTracker = {
     this.totalCalls++;
     this.callsByEndpoint[endpoint] = (this.callsByEndpoint[endpoint] || 0) + 1;
     // Dispatch event for UI updates
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: this.totalCalls,
-        cacheHits: this.cacheHits,
-        byEndpoint: this.callsByEndpoint
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: this.totalCalls,
+          cacheHits: this.cacheHits,
+          byEndpoint: this.callsByEndpoint,
+        },
+      })
+    );
   },
 
   trackCacheHit() {
     this.cacheHits++;
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: this.totalCalls,
-        cacheHits: this.cacheHits,
-        byEndpoint: this.callsByEndpoint
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: this.totalCalls,
+          cacheHits: this.cacheHits,
+          byEndpoint: this.callsByEndpoint,
+        },
+      })
+    );
   },
 
   reset() {
     this.totalCalls = 0;
     this.callsByEndpoint = {};
     this.cacheHits = 0;
-    window.dispatchEvent(new CustomEvent('apiCallUpdate', {
-      detail: {
-        total: 0,
-        cacheHits: 0,
-        byEndpoint: {}
-      }
-    }));
-  }
+    window.dispatchEvent(
+      new CustomEvent('apiCallUpdate', {
+        detail: {
+          total: 0,
+          cacheHits: 0,
+          byEndpoint: {},
+        },
+      })
+    );
+  },
 };
 
 // CACHING SYSTEM
@@ -97,7 +107,7 @@ const apiCache = {
     const key = this.generateKey(endpoint, params);
     const item = {
       data,
-      expiry: Date.now() + (ttlMinutes * 60 * 1000)
+      expiry: Date.now() + ttlMinutes * 60 * 1000,
     };
 
     // Store in memory
@@ -132,7 +142,7 @@ const apiCache = {
           if (item.expiry <= now) {
             keysToRemove.push(key);
           }
-        } catch (e) {
+        } catch {
           keysToRemove.push(key);
         }
       }
@@ -146,12 +156,15 @@ const apiCache = {
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.includes('flight') || key.includes('destination') || key.includes('airport'))) {
+      if (
+        key &&
+        (key.includes('flight') || key.includes('destination') || key.includes('airport'))
+      ) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-  }
+  },
 };
 
 /**
@@ -160,22 +173,30 @@ const apiCache = {
  */
 export const useCache = () => {
   // Return memoized cache interface to prevent recreating on every render
-  const cache = useMemo(() => ({
-    get: (endpoint, params) => apiCache.get(endpoint, params),
-    set: (endpoint, params, data, ttlMinutes) => apiCache.set(endpoint, params, data, ttlMinutes),
-    clear: () => apiCache.clear(),
-    clearOldItems: () => apiCache.clearOldItems()
-  }), []);
+  const cache = useMemo(
+    () => ({
+      get: (endpoint, params) => apiCache.get(endpoint, params),
+      set: (endpoint, params, data, ttlMinutes) => apiCache.set(endpoint, params, data, ttlMinutes),
+      clear: () => apiCache.clear(),
+      clearOldItems: () => apiCache.clearOldItems(),
+    }),
+    []
+  );
 
-  const tracker = useMemo(() => ({
-    trackCall: (endpoint) => apiCallTracker.trackCall(endpoint),
-    trackCacheHit: () => apiCallTracker.trackCacheHit(),
-    reset: () => apiCallTracker.reset()
-  }), []);
+  const tracker = useMemo(
+    () => ({
+      trackCall: endpoint => apiCallTracker.trackCall(endpoint),
+      trackCacheHit: () => apiCallTracker.trackCacheHit(),
+      reset: () => apiCallTracker.reset(),
+    }),
+    []
+  );
 
   return { cache, tracker };
 };
 
 // Export dev logging helpers for use in other modules
 export { devLog, devWarn };
-export const devError = (...args) => { if (isDev) console.error(...args); };
+export const devError = (...args) => {
+  if (isDev) console.error(...args);
+};

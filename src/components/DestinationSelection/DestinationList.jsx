@@ -17,7 +17,7 @@ export const DestinationList = ({
   sortBy,
   onSortChange,
   tripType,
-  onTripTypeChange,
+  onTripTypeChange: _onTripTypeChange,
   onSearchFlights,
   onBack,
   isSearching,
@@ -66,27 +66,35 @@ export const DestinationList = ({
               </div>
             </div>
           )}
-          {!loading && destinations.length > 0 && (() => {
-            const types = Array.isArray(tripType) ? tripType : (tripType && tripType !== 'all' ? [tripType] : []);
-            if (types.length === 0) return null;
-            const typeLabels = types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ');
-            return (
-              <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
-                <span>Showing: {typeLabels} destinations</span>
-              </div>
-            );
-          })()}
+          {!loading &&
+            destinations.length > 0 &&
+            (() => {
+              const types = Array.isArray(tripType)
+                ? tripType
+                : tripType && tripType !== 'all'
+                  ? [tripType]
+                  : [];
+              if (types.length === 0) return null;
+              const typeLabels = types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ');
+              return (
+                <div className="mt-3 inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                  <span>Showing: {typeLabels} destinations</span>
+                </div>
+              );
+            })()}
         </div>
 
         {/* Travelpayouts Cached Data Notice */}
-        {!loading && destinations.length > 0 && import.meta.env.VITE_FLIGHT_API_PROVIDER === 'travelpayouts' && (
-          <div className="mb-6 bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
-            <p className="text-sm text-blue-800">
-              <span className="font-semibold">💡 Quick Search:</span> Prices shown are from recent searches
-              (updated daily). Final prices will be confirmed when you search flights.
-            </p>
-          </div>
-        )}
+        {!loading &&
+          destinations.length > 0 &&
+          import.meta.env.VITE_FLIGHT_API_PROVIDER === 'travelpayouts' && (
+            <div className="mb-6 bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">💡 Quick Search:</span> Prices shown are from recent
+                searches (updated daily). Final prices will be confirmed when you search flights.
+              </p>
+            </div>
+          )}
 
         {/* Sorting Controls */}
         {!loading && destinations.length > 0 && (

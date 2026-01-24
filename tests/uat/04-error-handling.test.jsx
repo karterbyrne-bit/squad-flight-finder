@@ -16,7 +16,7 @@ describe('UAT: Error Handling and Edge Cases', () => {
   let restoreFetch
 
   beforeEach(() => {
-    localStorage.clear()
+    if (typeof localStorage !== 'undefined') localStorage.clear()
     vi.clearAllMocks()
   })
 

@@ -448,7 +448,7 @@ describe('UAT: Traveler and Budget Management', () => {
         await new Promise(resolve => setTimeout(resolve, 200))
 
         // Get initial color indicators
-        const initialColors = Array.from(document.querySelectorAll('[style]'))
+        const _initialColors = Array.from(document.querySelectorAll('[style]'))
           .map(el => el.getAttribute('style'))
           .filter(style => style && (style.includes('background') || style.includes('color')))
 

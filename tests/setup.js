@@ -5,8 +5,8 @@ import { afterEach, beforeEach, vi } from 'vitest'
 // Cleanup after each test
 afterEach(() => {
   cleanup()
-  localStorage.clear()
-  sessionStorage.clear()
+  if (typeof localStorage !== 'undefined') localStorage.clear()
+  if (typeof sessionStorage !== 'undefined') sessionStorage.clear()
 })
 
 // Mock environment variables

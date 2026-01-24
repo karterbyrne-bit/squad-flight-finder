@@ -422,7 +422,7 @@ describe('UAT: Filtering and Sorting', () => {
       const checkboxes = document.querySelectorAll('input[type="checkbox"]')
       if (checkboxes.length > 0) {
         await user.click(checkboxes[0])
-        const wasChecked = checkboxes[0].checked
+        const _wasChecked = checkboxes[0].checked
 
         // Wait for state to save
         await new Promise(resolve => setTimeout(resolve, 300))
