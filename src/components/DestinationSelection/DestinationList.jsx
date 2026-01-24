@@ -4,6 +4,7 @@ import { DestinationCard } from './DestinationCard';
 import { DestinationFilters } from './DestinationFilters';
 import { Button } from '../shared/Button';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
+import AdSense from '../AdSense';
 
 export const DestinationList = ({
   destinations,
@@ -82,6 +83,18 @@ export const DestinationList = ({
               );
             })()}
         </div>
+
+        {/* Travelpayouts Cached Data Notice */}
+        {!loading &&
+          destinations.length > 0 &&
+          import.meta.env.VITE_FLIGHT_API_PROVIDER === 'travelpayouts' && (
+            <div className="mb-6 bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">💡 Quick Search:</span> Prices shown are from recent
+                searches (updated daily). Final prices will be confirmed when you search flights.
+              </p>
+            </div>
+          )}
 
         {/* Sorting Controls */}
         {!loading && destinations.length > 0 && (
